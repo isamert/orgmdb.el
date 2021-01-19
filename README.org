@@ -49,5 +49,5 @@ Another example:
 
 There are also some other interactive functions that you can use, for example:
 
-- =orgmdb-movie-properties= :: Show all properties of a movie in a cute little org-mode buffer with a small poster. If you call this function on a org header, it'll search for header title in the OMDb. See the following gif:
-- =orgmdb-fill-movie-properties= :: Set preselected selected list of properties (see =orgmdb-fill-property-list=) to current org header.
+- =orgmdb-movie-properties= :: Show all properties of a movie in a cute little org-mode buffer with a small poster. If you call this function on a org header, it'll search for header title in the OMDb. This is the function that you can see in the demo above.
+- =orgmdb-fill-movie-properties= :: Fetch and set preselected list of properties (see =orgmdb-fill-property-list=) to current org header. This is useful for having some metadata under your header so that you can filter/search etc. with those properties.
