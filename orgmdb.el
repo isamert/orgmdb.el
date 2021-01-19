@@ -201,6 +201,7 @@ When called interactively on an org header, it will automatically detect
     (insert (format "- IMDb Rating :: %s\n" (orgmdb-imdb-rating info)))
     (insert (format "\n- Plot :: %s\n" (orgmdb-plot info)))))
 
+;;;###autoload
 (defun orgmdb-fill-movie-properties (title &optional year)
   "When called on an org header, fetches and sets pre-defined properties.
 See `orgmdb-fill-property-list' for which properties will be set."
