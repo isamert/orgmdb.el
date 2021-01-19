@@ -29,7 +29,7 @@
 (require 's)
 (require 'dash)
 (require 'org)
-(require json)
+(require 'json)
 
 ;;;###autoload
 (defvar orgmdb-omdb-apikey
