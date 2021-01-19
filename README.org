@@ -1,0 +1,53 @@
+* orgmdb.el
+
+I keep my watchlist in org-mode and this package makes metadata retrieving pretty easy through OMDb. The package is quite immature, I just copied functions from my Emacs config and called it a package.
+
+** Installing
+Download the =orgmdb.el= and put it into your load path, then you can use it by =(require 'orgmdb)=.
+
+Another option is to use =use-package= and =quelpa=:
+#+begin_src elisp
+  (use-package orgmdb
+    :ensure t
+    :quelpa (orgmdb
+             :fetcher github
+             :repo "isamert/orgmdb.el"))
+#+end_src
+
+** Usage
+You need get yourself an API key to be able to use this package, see [[https://omdbapi.com/][OMDb website]]. After getting yourself an API key, you can start using.
+
+#+begin_src elisp
+  (setq orgmdb-omdb-apikey "YOUR-API-KEY")
+  (let ((movie (orgmdb :title "in the mood for love")))
+    (format "Movie name: %s, Year: %s, Plot: %s"
+            (orgmdb-title movie)
+            (orgmdb-year movie)
+            (orgmdb-plot movie)))
+#+end_src
+
+Another example:
+#+begin_src elisp
+  (orgmdb :title "thinking of ending things" :year 2020)
+
+  ;; This returns something like this:
+  ((Title . "I'm Thinking of Ending Things")
+   (Year . "2020")
+   (Rated . "R")
+   (Released . "04 Sep 2020")
+   (Runtime . "134 min")
+   (Genre . "Drama, Thriller")
+   (Director . "Charlie Kaufman")
+   (Writer . "Charlie Kaufman (written for the screen by), Iain Reid (based on the book by)")
+   (Actors . "Jesse Plemons, Jessie Buckley, Toni Collette, David Thewlis") (Plot . "Full of misgivings, a young woman travels with her new boyfriend to his parents' secluded farm. Upon arriving, she comes to question everything she thought she knew about him, and herself.")
+   (Language . "English, Spanish")
+   (Country . "USA") ...)
+#+end_src
+
+There are also some other interactive functions that you can use, for example:
+
+- =orgmdb-movie-properties= :: Show all properties of a movie in a cute little org-mode buffer with a small poster. If you call this function on a org header, it'll search for header title in the OMDb. See the following gif:
+- =orgmdb-fill-movie-properties= :: Set preselected selected list of properties (see =orgmdb-fill-property-list=) to current org header.
+
+** Demo
+[[file:./orgmdb.gif]]
