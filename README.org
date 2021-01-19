@@ -14,6 +14,9 @@ Another option is to use =use-package= and =quelpa=:
              :repo "isamert/orgmdb.el"))
 #+end_src
 
+** Demo
+[[file:./orgmdb.gif]]
+
 ** Usage
 You need get yourself an API key to be able to use this package, see [[https://omdbapi.com/][OMDb website]]. After getting yourself an API key, you can start using.
 
@@ -48,6 +51,3 @@ There are also some other interactive functions that you can use, for example:
 
 - =orgmdb-movie-properties= :: Show all properties of a movie in a cute little org-mode buffer with a small poster. If you call this function on a org header, it'll search for header title in the OMDb. See the following gif:
 - =orgmdb-fill-movie-properties= :: Set preselected selected list of properties (see =orgmdb-fill-property-list=) to current org header.
-
-** Demo
-[[file:./orgmdb.gif]]
