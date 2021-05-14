@@ -1,11 +1,11 @@
-;;; orgmdb.el --- An OMDb API client for Emacs with some org-mode related convenience functions  -*- lexical-binding: t -*-
+;;; orgmdb.el --- An OMDb API client with some convenience functions -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Isa Mert Gurbuz
 
 ;; Author: Isa Mert Gurbuz <isamert@protonmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/isamert/orgmdb
-;; Package-Requires: ((emacs "24.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0") (json "1.0"))
+;; Package-Requires: ((emacs "25.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
