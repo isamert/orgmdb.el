@@ -64,7 +64,7 @@ PARAMS should be an alist.  Pairs with nil values are skipped."
        (format "%s&%s" url it)
      (format "%s?%s" url it))
    (with-current-buffer (url-retrieve-synchronously it)
-     (let ((result (buffer-string)))
+     (let ((result (decode-coding-string (buffer-string) 'utf-8)))
        (kill-buffer)
        result))
    (split-string it "\n\n")
