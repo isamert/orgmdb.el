@@ -141,7 +141,7 @@ Some call examples:
 ;;;###autoload
 (defun orgmdb-director (r &optional d)
   "Get director from omdb response R and default to D it does not exits."
-  (orgmdb--get 'Title r d))
+  (orgmdb--get 'Director r d))
 
 ;;;###autoload
 (defun orgmdb-actors (r &optional d)
