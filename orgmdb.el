@@ -168,7 +168,30 @@ Some call examples:
   "Get metascore from omdb response R and default to D it does not exits."
   (orgmdb--get 'Metascore r d))
 
-(defun orgmdb--detect-title-from-header ()
+;;;###autoload
+(defun orgmdb-type (r &optional d)
+  "Get type from omdb response R and default to D it does not exits."
+  (orgmdb--get 'Type r d))
+
+;;;###autoload
+(defun orgmdb-season (r &optional d)
+  "Get season from omdb response R and default to D it does not exits."
+  (orgmdb--get 'Season r d))
+
+;;;###autoload
+(defun orgmdb-episode (r &optional d)
+  "Get episode from omdb response R and default to D it does not exits."
+  (orgmdb--get 'Episode r d))
+
+;;;###autoload
+(defun orgmdb-metascore (r &optional d)
+  "Get metascore from omdb response R and default to D it does not exits."
+  (orgmdb--get 'Metascore r d))
+
+(defun orgmdb--ask-for-title-and-year ()
+  "Simply ask for title and year from interactively."
+  `(:title ,(read-string "Title: ")
+    :year ,(read-string "Year (can be empty): ")))
   (-if-let (header (org-entry-get nil "ITEM"))
        (save-match-data
          (if (string-match "\\(.+\\)(\\([0-9]\\{4\\}\\))" header)
