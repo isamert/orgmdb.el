@@ -51,26 +51,23 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 
 (defconst orgmdb--types '("movie" "series" "episode"))
 
-(defun orgmdb--mk-url ()
-  "Build OMDb url to do a request."
-  (format  "%s/?apikey=%s" orgmdb-omdb-url orgmdb-omdb-apikey))
+(defun orgmdb--url-retrieve-sync (url)
+  "Retrieve URL synchronously as string."
+  (with-current-buffer (url-retrieve-synchronously url)
+    (let ((result (decode-coding-string (buffer-string) 'utf-8)))
+      (kill-buffer)
+      result)))
 
 (defun orgmdb--request (url params)
   "Send a GET request to given URL and return the response body.
 PARAMS should be an alist.  Pairs with nil values are skipped."
-  (--> params
-   (-map (lambda (x) (when (cadr x) (format "%s=%s" (car x) (url-hexify-string (cadr x))))) it)
-   (--keep it it)
-   (-reduce (lambda (acc x) (format "%s&%s" acc x)) it)
-   (if (string-match-p "?" url)
-       (format "%s&%s" url it)
-     (format "%s?%s" url it))
-   (with-current-buffer (url-retrieve-synchronously it)
-     (let ((result (decode-coding-string (buffer-string) 'utf-8)))
-       (kill-buffer)
-       result))
-   (split-string it "\n\n")
-   (cadr it)))
+  (->> params
+    (--filter (cadr it))
+    (url-build-query-string)
+    (format "%s/?%s" url)
+    (orgmdb--url-retrieve-sync)
+    (s-split "\n\n")
+    (cadr)))
 
 ;;;###autoload
 (defun orgmdb (&rest args)
@@ -78,15 +75,16 @@ PARAMS should be an alist.  Pairs with nil values are skipped."
 Some call examples:
   (orgmdb :title \"in the mood for love\")
   (orgmdb :title \"in the mood for love\" :year 2000)
-  (orgmdb :title \"in the mood for love\" :type \"movie\")
+  (orgmdb :title \"in the mood for love\" :type 'movie)
   (orgmdb :imdb \"tt0118694\")"
-  (interactive)
-  (--> (orgmdb--mk-url)
-       (orgmdb--request it `(("t" ,(plist-get args :title))
-                             ("i" ,(plist-get args :imdb))
-                             ("y" ,(format "%s" (plist-get args :year)))
-                             ("type" ,(plist-get args :type))))
-       (json-read-from-string it)))
+  (->> (orgmdb--request
+        orgmdb-omdb-url
+        `(("t" ,(plist-get args :title))
+          ("i" ,(plist-get args :imdb))
+          ("y" ,(plist-get args :year))
+          ("type" ,(plist-get args :type))
+          ("apikey" ,(s-trim orgmdb-omdb-apikey))))
+    (json-read-from-string)))
 
 (defun orgmdb--get (f r &optional d)
   "Get key F from response R and default to D if F does not exist or is null/na."
