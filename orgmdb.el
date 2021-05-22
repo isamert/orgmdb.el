@@ -28,6 +28,7 @@
 
 (require 's)
 (require 'dash)
+(require 'seq)
 (require 'org)
 (require 'json)
 
@@ -93,6 +94,18 @@ Some call examples:
         d
       result)))
 
+(defun orgmdb--score-of (rating-type r)
+  "Get RATING-TYPE from R.
+Right now RATING-TYPE could be one of the following (as omdb API
+only returns these):
+- Internet Movie Database
+- Rotten Tomatoes
+- Metacritic"
+  (->>
+   (alist-get 'Ratings r)
+   (seq-find (lambda (it) (s-equals? (alist-get 'Source it) rating-type)))
+   (alist-get 'Value)))
+
 ;;;###autoload
 (defun orgmdb-title (r &optional d)
   "Get title from omdb response R and default to D it does not exits."
@@ -134,6 +147,14 @@ Some call examples:
   (orgmdb--get 'imdbRating r d))
 
 ;;;###autoload
+(defun orgmdb-imdb (r &optional d)
+  "Get IMDb score from omdb response R and default to D it does not exits.
+The difference between this function and `orgmdb-imdb-rating' is
+that this returns in the \"X/10\" format while
+`orgmdb-imdb-rating' returns just \"X\"."
+  (or (orgmdb--score-of "Internet Movie Database" r) d))
+
+;;;###autoload
 (defun orgmdb-poster (r &optional d)
   "Get poster from omdb response R and default to D it does not exits."
   (orgmdb--get 'Poster r d))
@@ -164,11 +185,6 @@ Some call examples:
   (orgmdb--get 'Awards r d))
 
 ;;;###autoload
-(defun orgmdb-metascore (r &optional d)
-  "Get metascore from omdb response R and default to D it does not exits."
-  (orgmdb--get 'Metascore r d))
-
-;;;###autoload
 (defun orgmdb-type (r &optional d)
   "Get type from omdb response R and default to D it does not exits."
   (orgmdb--get 'Type r d))
@@ -187,6 +203,19 @@ Some call examples:
 (defun orgmdb-metascore (r &optional d)
   "Get metascore from omdb response R and default to D it does not exits."
   (orgmdb--get 'Metascore r d))
+
+;;;###autoload
+(defun orgmdb-metacritic (r &optional d)
+  "Get metacritic score from omdb response R and default to D it does not exits.
+The difference between this function and `orgmdb-metascore' is
+that this returns in the \"X/100\" format while
+`orgmdb-metascore' returns just \"X\"."
+  (or (orgmdb--score-of "Metacritic" r) d))
+
+;;;###autoload
+(defun orgmdb-tomatometer (r &optional d)
+  "Get tomatometer score from omdb response R and default to D it does not exits."
+  (or (orgmdb--score-of "Rotten Tomatoes" r) d))
 
 (defun orgmdb--ask-for-type ()
   "Simply ask for a type."
