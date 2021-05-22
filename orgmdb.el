@@ -223,6 +223,14 @@ If not on a org header, simpy ask from user."
                               `(,(s-trim (car (s-split "(" header)))))))))
     `(:imdb ,imdb-id :type ,type :title ,title :year ,year)))
 
+(defun orgmdb-is-response-successful (response)
+  "Check if the returned RESPONSE is successful or not."
+  (not (string-equal (alist-get 'Response response) "False")))
+
+(defun orgmdb--ensure-response-is-successful (response)
+  (when (not (orgmdb-is-response-successful response))
+    (user-error "The search did not return any results")))
+
 ;;;###autoload
 (defun orgmdb-movie-properties (&rest args)
   "Open new org-buffer containing movie info and poster of given ARGS.
@@ -235,6 +243,7 @@ for check how parameter detection works."
   (interactive (orgmdb--detect-params-from-header))
   (let ((info (apply #'orgmdb args))
         (poster-file (make-temp-file "~/.cache/orgmdb_poster_" nil ".jpg")))
+    (orgmdb--ensure-response-is-successful info)
     (shell-command-to-string (format "curl '%s' > %s" (orgmdb-poster info) poster-file))
     (switch-to-buffer (format "*orgmdb: %s*" (orgmdb-title info)))
     (org-mode)
@@ -254,6 +263,7 @@ for check how parameter detection works."
     (insert (format "\n- Plot :: %s\n" (orgmdb-plot info)))))
 
 (defun orgmdb--fill-properties (info should-set-title)
+  (orgmdb--ensure-response-is-successful info)
   (--map (-as-> (format "orgmdb-%s" it) fn
                 (intern fn)
                 (apply fn `(,info "N/A"))
