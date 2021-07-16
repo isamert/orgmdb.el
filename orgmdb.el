@@ -180,6 +180,36 @@ that this returns in the \"X/10\" format while
   (orgmdb--get 'Country r d))
 
 ;;;###autoload
+(defun orgmdb-language (r &optional d)
+  "Get language from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'Language r d))
+
+;;;###autoload
+(defun orgmdb-imdb-votes (r &optional d)
+  "Get IMDb vote count from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'imdbVotes r d))
+
+;;;###autoload
+(defun orgmdb-dvd (r &optional d)
+  "Get DVD release date from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'DVD r d))
+
+;;;###autoload
+(defun orgmdb-box-office (r &optional d)
+  "Get box office from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'BoxOffice r d))
+
+;;;###autoload
+(defun orgmdb-production (r &optional d)
+  "Get production firm from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'Production r d))
+
+;;;###autoload
+(defun orgmdb-website (r &optional d)
+  "Get website from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'Website r d))
+
+;;;###autoload
 (defun orgmdb-awards (r &optional d)
   "Get awards from omdb response R and default to D it does not exits."
   (orgmdb--get 'Awards r d))
@@ -203,6 +233,11 @@ that this returns in the \"X/10\" format while
 (defun orgmdb-metascore (r &optional d)
   "Get metascore from omdb response R and default to D it does not exits."
   (orgmdb--get 'Metascore r d))
+
+;;;###autoload
+(defun orgmdb-writer (r &optional d)
+  "Get writer from omdb response R and default to D if it does not exits."
+  (orgmdb--get 'Writer r d))
 
 ;;;###autoload
 (defun orgmdb-metacritic (r &optional d)
