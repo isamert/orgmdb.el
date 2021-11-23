@@ -104,7 +104,7 @@ Some call examples:
               (orgmdb--request orgmdb-omdb-url `(,@req-params ("season" ,current-season)))
               (json-read-from-string)
               (alist-get 'Episodes)
-              (seq-map (lambda (it) (map-insert it 'Season current-season)))))))
+              (seq-map (lambda (it) (map-insert it 'Season (number-to-string current-season))))))))
          (map-put! response 'Episodes episodes)
          (map-delete response 'Season)))
       (episode
