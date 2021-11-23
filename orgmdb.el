@@ -77,15 +77,39 @@ Some call examples:
   (orgmdb :title \"in the mood for love\")
   (orgmdb :title \"in the mood for love\" :year 2000)
   (orgmdb :title \"in the mood for love\" :type 'movie)
-  (orgmdb :imdb \"tt0118694\")"
-  (->> (orgmdb--request
-        orgmdb-omdb-url
-        `(("t" ,(plist-get args :title))
-          ("i" ,(plist-get args :imdb))
-          ("y" ,(plist-get args :year))
-          ("type" ,(plist-get args :type))
-          ("apikey" ,(s-trim orgmdb-omdb-apikey))))
-    (json-read-from-string)))
+  (orgmdb :imdb \"tt0118694\")
+  (orgmdb :imdb \"tt10574558\" :season 1)
+  (orgmdb :imdb \"tt10574558\" :season 1 :episode 3)
+  (orgmdb :imdb \"tt0944947\" :episode 'all)"
+  (let* ((req-params
+          `(("t" ,(plist-get args :title))
+            ("i" ,(plist-get args :imdb))
+            ("y" ,(plist-get args :year))
+            ("type" ,(plist-get args :type))
+            ("season" ,(plist-get args :season))
+            ("apikey" ,(s-trim orgmdb-omdb-apikey)))))
+    (pcase (plist-get args :episode)
+      ('all
+       (let* ((response (json-read-from-string
+                         (orgmdb--request orgmdb-omdb-url `(,@req-params ("season" 1)))))
+              (total-seasons (string-to-number (alist-get 'totalSeasons response)))
+              (episodes '()))
+         (dolist (current-season (number-sequence 1 total-seasons))
+           (setq
+            episodes
+            (seq-concatenate
+             json-array-type
+             episodes
+             (->>
+              (orgmdb--request orgmdb-omdb-url `(,@req-params ("season" ,current-season)))
+              (json-read-from-string)
+              (alist-get 'Episodes)
+              (seq-map (lambda (it) (map-insert it 'Season current-season)))))))
+         (map-put! response 'Episodes episodes)
+         (map-delete response 'Season)))
+      (episode
+       (json-read-from-string
+        (orgmdb--request orgmdb-omdb-url `(,@req-params ("episode" ,episode))))))))
 
 (defun orgmdb--get (f r &optional d)
   "Get key F from response R and default to D if F does not exist or is null/na."
