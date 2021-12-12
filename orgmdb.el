@@ -52,6 +52,11 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 
 (defconst orgmdb--types '("movie" "series" "episode"))
 
+(defmacro orgmdb--with-completing-read-exact-order (&rest body)
+  "Disable any kind of sorting in completing read."
+  `(let ((selectrum-should-sort nil))
+     ,@body))
+
 (defun orgmdb--url-retrieve-sync (url)
   "Retrieve URL synchronously as string."
   (with-current-buffer (url-retrieve-synchronously url)
@@ -418,6 +423,184 @@ detecting what to search for, it asks for IMDb id."
   (orgmdb--fill-properties
    (orgmdb :imdb (read-string "IMDb id: "))
    should-set-title))
+
+;;
+;; IN PROGRESS ZONE
+;;
+
+
+(defvar orgmdb-show-tag "series")
+(defvar orgmdb-movie-tag "movie")
+(defvar orgmdb-episode-tag "episode")
+
+(defun orgmdb-act ()
+  (interactive)
+  (let ((tags (org-get-tags)))
+    (cond
+     ((-contains? tags orgmdb-movie-tag)
+      (orgmdb-act-on-movie))
+     ((-contains? tags orgmdb-show-tag)
+      (orgmdb-act-on-show))
+     ((or (-contains? tags orgmdb-episode-tag)
+          (s-matches? "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}" "S02E02"))
+      (orgmdb-act-on-episode)))))
+
+(setq orgmdb--movie-actions '())
+(setq orgmdb--show-actions '())
+(setq orgmdb--episode-actions '())
+
+(cl-defun orgmdb-defaction (&key name on act definition)
+  (--each on
+    (push (cons definition act) (symbol-value (intern (concat "orgmdb--" (symbol-name it) "-actions")))))
+  ;; TODO define function orgmdb-NAME-action
+  )
+
+(orgmdb-defaction
+ :name 'open-local-video
+ :definition "Open local video"
+ :on '(movie show episode)
+ :act (lambda (type title imdb)
+        (pcase type
+          ((or 'movie show) (orgmdb--open-video title))
+          ('episode (orgmdb--open-video title episode)))))
+
+(orgmdb-defaction
+ :name 'show-detailed-info
+ :definition "Show detailed info"
+ :on '(movie show episode)
+ :act (lambda (type title imdb)
+        (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
+
+(defun orgmdb-act-on-movie ()
+  (orgmdb--act-on 'movie))
+
+(defun orgmdb-act-on-show ()
+  (orgmdb--act-on 'show))
+
+(defun orgmdb-act-on-episode ()
+  (orgmdb--act-on 'show))
+
+(defun orgmdb--act-on (type)
+  (orgmdb--with-completing-read-exact-order
+   (let* ((actions (symbol-value (intern (concat "orgmdb--" (symbol-name type) "-actions"))))
+          (result (completing-read
+                   (format "Act on %s: " type)
+                   actions)))
+     (funcall
+      (cdr (assoc-string result actions))
+      type
+      (org-entry-get nil "ITEM")
+      (org-entry-get nil "IMDB-ID")))))
+
+
+;; (defun orgmdb-select-episode (show-id)
+;;   "List all episodes of current SHOW-ID and act on selected one.
+;; If called interactively, tries to detect the show under
+;; cursor (an org header with `IMDB-ID' property)."
+;;   (interactive)
+;;   (orgmdb--with-completing-read-exact-order
+;;    (let ((show (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)))
+;;      (->>
+;;       show
+;;       (alist-get 'Episodes)
+;;       (--map (let-alist it
+;;                (cons (format "S%02dE%02d - %s"
+;;                              (string-to-number .Season)
+;;                              (string-to-number .Episode)
+;;                              .Title)
+;;                      it)))
+;;       (isamert/alist-completing-read "Select an episode: ")
+;;       (isamert/watchlist--act-on-episode show)))))
+
+;; (defun isamert/watchlist--act-on-episode (show episode)
+;;   (let ((show-title (alist-get 'Title show))
+;;         (episode-selector (format
+;;                            "s%02de%02d"
+;;                            (string-to-number (alist-get 'Season episode))
+;;                            (string-to-number (alist-get 'Episode episode)))))
+;;     (pcase (completing-read "Select an action: " '("Open" "Search on 1337x.to"))
+;;       ("Open"
+;;        (message (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
+;;                         (s-downcase (s-replace " " "*" show-title))
+;;                         episode-selector
+;;                         empv-video-dir))
+;;        (->>
+;;         (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
+;;                 (s-downcase (s-replace " " "*" show-title))
+;;                 episode-selector
+;;                 empv-video-dir)
+;;         (shell-command-to-string)
+;;         (s-split "\n")
+;;         (--filter (not (s-blank? it)))
+;;         (completing-read "Select file: ")
+;;         (empv-play)))
+;;       ("Search on 1337x.to"
+;;        (browse-url
+;;         (format "https://1337x.to/search/%s+%s/1/"
+;;                 (->>
+;;                  show-title
+;;                  (s-downcase)
+;;                  (s-replace " " "+"))
+;;                 episode-selector))))))
+
+
+;; TODO list matches with video extensions only
+;; TODO add option to play directly if one result is found
+;; TODO Remove empv-videos-dir prefix
+(defun orgmdb--open-video (name &optional episode)
+  (interactive)
+  (->>
+   name
+   (s-trim)
+   (s-replace " " "*")
+   (s-downcase)
+   ((lambda (it) (string-trim-right it " *([0-9]+)")))
+   ((lambda (it)
+      (format "fd --absolute-path --type=file --glob '*%s*%s' %s"
+              it
+              (if episode (concat (s-downcase episode) "*") "")
+              empv-video-dir)))
+   ((lambda (it)
+      (message ">>>>> %s" it)
+      it))
+   (shell-command-to-string)
+   (s-split "\n")
+   (--filter (not (s-blank? it)))
+   (completing-read "Select file to play: ")
+   (empv-play)))
+
+;;;###autoload
+(define-minor-mode orgmdb-mode
+  "Get your foos in the right places."
+  :lighter " orgmdb"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c o f") #'orgmdb-fill-movie-properties)
+            (define-key map (kbd "C-c o f") #'orgmdb-fill-movie-properties)
+            map))
+
+;; TODO automatically open the minor mode
+;; Add a hook to org-mode
+;; Check if opened file is name orgmdb-watchlist-file-name (like "watchlist.org")
+;; Then enable the mode
+;; (add-hook 'org-mode-hook 'foo-mode). Maybe a variable for file name?
+
+(provide 'foo-mode)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (provide 'orgmdb)
 ;;; orgmdb.el ends here
