@@ -428,57 +428,40 @@ detecting what to search for, it asks for IMDb id."
 ;; IN PROGRESS ZONE
 ;;
 
-
 (defvar orgmdb-show-tag "series")
 (defvar orgmdb-movie-tag "movie")
 (defvar orgmdb-episode-tag "episode")
+
+(defvar orgmdb--movie-actions '())
+(defvar orgmdb--show-actions '())
+(defvar orgmdb--episode-actions '())
 
 (defun orgmdb-act ()
   (interactive)
   (let ((tags (org-get-tags)))
     (cond
+     ((or (-contains? tags orgmdb-episode-tag)
+          (s-matches? "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}" (thing-at-point 'symbol)))
+      (orgmdb-act-on-episode))
      ((-contains? tags orgmdb-movie-tag)
       (orgmdb-act-on-movie))
      ((-contains? tags orgmdb-show-tag)
-      (orgmdb-act-on-show))
-     ((or (-contains? tags orgmdb-episode-tag)
-          (s-matches? "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}" "S02E02"))
-      (orgmdb-act-on-episode)))))
-
-(setq orgmdb--movie-actions '())
-(setq orgmdb--show-actions '())
-(setq orgmdb--episode-actions '())
-
-(cl-defun orgmdb-defaction (&key name on act definition)
-  (--each on
-    (push (cons definition act) (symbol-value (intern (concat "orgmdb--" (symbol-name it) "-actions")))))
-  ;; TODO define function orgmdb-NAME-action
-  )
-
-(orgmdb-defaction
- :name 'open-local-video
- :definition "Open local video"
- :on '(movie show episode)
- :act (lambda (type title imdb)
-        (pcase type
-          ((or 'movie show) (orgmdb--open-video title))
-          ('episode (orgmdb--open-video title episode)))))
-
-(orgmdb-defaction
- :name 'show-detailed-info
- :definition "Show detailed info"
- :on '(movie show episode)
- :act (lambda (type title imdb)
-        (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
+      (orgmdb-act-on-show)))))
 
 (defun orgmdb-act-on-movie ()
+  "List possible actions on the movie at point."
+  (interactive)
   (orgmdb--act-on 'movie))
 
 (defun orgmdb-act-on-show ()
+  "List possible actions on the show at point."
+  (interactive)
   (orgmdb--act-on 'show))
 
 (defun orgmdb-act-on-episode ()
-  (orgmdb--act-on 'show))
+  "List possible actions on the episode at point."
+  (interactive)
+  (orgmdb--act-on 'episode))
 
 (defun orgmdb--act-on (type)
   (orgmdb--with-completing-read-exact-order
@@ -490,59 +473,75 @@ detecting what to search for, it asks for IMDb id."
       (cdr (assoc-string result actions))
       type
       (org-entry-get nil "ITEM")
-      (org-entry-get nil "IMDB-ID")))))
+      (org-entry-get nil "IMDB-ID")
+      (when (equal type 'episode)
+        (s-downcase (thing-at-point 'symbol)))))))
 
+(cl-defun orgmdb-defaction (&key name on act definition)
+  (--each on
+    (add-to-list
+     (intern (concat "orgmdb--" (symbol-name it) "-actions"))
+     (cons definition act)))
+  ;; TODO define function orgmdb-NAME-action
+  )
 
-;; (defun orgmdb-select-episode (show-id)
-;;   "List all episodes of current SHOW-ID and act on selected one.
-;; If called interactively, tries to detect the show under
-;; cursor (an org header with `IMDB-ID' property)."
-;;   (interactive)
-;;   (orgmdb--with-completing-read-exact-order
-;;    (let ((show (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)))
-;;      (->>
-;;       show
-;;       (alist-get 'Episodes)
-;;       (--map (let-alist it
-;;                (cons (format "S%02dE%02d - %s"
-;;                              (string-to-number .Season)
-;;                              (string-to-number .Episode)
-;;                              .Title)
-;;                      it)))
-;;       (isamert/alist-completing-read "Select an episode: ")
-;;       (isamert/watchlist--act-on-episode show)))))
+(orgmdb-defaction
+ :name 'open-local-video
+ :definition "Open local video"
+ :on '(movie show episode)
+ :act (lambda (type title &rest _)
+        (pcase type
+          ((or 'movie 'show) (orgmdb--open-video title))
+          ('episode (orgmdb--open-video title episode)))))
 
-;; (defun isamert/watchlist--act-on-episode (show episode)
-;;   (let ((show-title (alist-get 'Title show))
-;;         (episode-selector (format
-;;                            "s%02de%02d"
-;;                            (string-to-number (alist-get 'Season episode))
-;;                            (string-to-number (alist-get 'Episode episode)))))
-;;     (pcase (completing-read "Select an action: " '("Open" "Search on 1337x.to"))
-;;       ("Open"
-;;        (message (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
-;;                         (s-downcase (s-replace " " "*" show-title))
-;;                         episode-selector
-;;                         empv-video-dir))
-;;        (->>
-;;         (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
-;;                 (s-downcase (s-replace " " "*" show-title))
-;;                 episode-selector
-;;                 empv-video-dir)
-;;         (shell-command-to-string)
-;;         (s-split "\n")
-;;         (--filter (not (s-blank? it)))
-;;         (completing-read "Select file: ")
-;;         (empv-play)))
-;;       ("Search on 1337x.to"
-;;        (browse-url
-;;         (format "https://1337x.to/search/%s+%s/1/"
-;;                 (->>
-;;                  show-title
-;;                  (s-downcase)
-;;                  (s-replace " " "+"))
-;;                 episode-selector))))))
+(orgmdb-defaction
+ :name 'show-detailed-info
+ :definition "Show detailed info"
+ :on '(movie show episode)
+ :act (lambda (&rest _)
+        (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
 
+(orgmdb-defaction
+ :name 'show-detailed-info
+ :definition "Fill properties"
+ :on '(movie show episode)
+ :act (lambda (&rest _)
+        (orgmdb-fill-movie-properties t)))
+
+(orgmdb-defaction
+ :name 'search-torrent
+ :definition "Search on 1337x.to"
+ :on '(movie show episode)
+ :act (lambda (type title imdb episode-selector)
+        (browse-url
+         (format "https://1337x.to/search/%s%s/1/"
+                 (->>
+                  title
+                  (s-downcase)
+                  (s-replace " " "+"))
+                 (pcase type
+                   ('episode (format "+%s" episode-selector))
+                   (_ ""))))))
+
+(orgmdb-defaction
+ :name 'select-episode
+ :definition "Select an episode..."
+ :on '(show)
+ :act (lambda (_ title imdb &rest _)
+        (orgmdb--with-completing-read-exact-order
+         (let ((show (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)))
+           (->>
+            show
+            (alist-get 'Episodes)
+            (--map (let-alist it
+                     (cons (format "S%02dE%02d - %s"
+                                   (string-to-number .Season)
+                                   (string-to-number .Episode)
+                                   .Title)
+                           it)))
+            (completing-read "Select an episode: ")
+            ;; TODO Pass episode selector (SXXEXX) somehow or maybe pass the whole episode object
+            (orgmdb-act-on-episode))))))
 
 ;; TODO list matches with video extensions only
 ;; TODO add option to play directly if one result is found
@@ -574,7 +573,7 @@ detecting what to search for, it asks for IMDb id."
   "Get your foos in the right places."
   :lighter " orgmdb"
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c o f") #'orgmdb-fill-movie-properties)
+            (define-key map (kbd "C-c o o") #'orgmdb-act)
             (define-key map (kbd "C-c o f") #'orgmdb-fill-movie-properties)
             map))
 
@@ -583,24 +582,6 @@ detecting what to search for, it asks for IMDb id."
 ;; Check if opened file is name orgmdb-watchlist-file-name (like "watchlist.org")
 ;; Then enable the mode
 ;; (add-hook 'org-mode-hook 'foo-mode). Maybe a variable for file name?
-
-(provide 'foo-mode)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (provide 'orgmdb)
 ;;; orgmdb.el ends here
