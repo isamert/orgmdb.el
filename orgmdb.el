@@ -54,7 +54,8 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 
 (defmacro orgmdb--with-completing-read-exact-order (&rest body)
   "Disable any kind of sorting in completing read."
-  `(let ((selectrum-should-sort nil))
+  `(let ((selectrum-should-sort nil)
+         (vertico-sort-function nil))
      ,@body))
 
 (defun orgmdb--url-retrieve-sync (url)
@@ -68,12 +69,12 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
   "Send a GET request to given URL and return the response body.
 PARAMS should be an alist.  Pairs with nil values are skipped."
   (->> params
-    (--filter (cadr it))
-    (url-build-query-string)
-    (format "%s/?%s" url)
-    (orgmdb--url-retrieve-sync)
-    (s-split "\n\n")
-    (cadr)))
+       (--filter (cadr it))
+       (url-build-query-string)
+       (format "%s/?%s" url)
+       (orgmdb--url-retrieve-sync)
+       (s-split "\n\n")
+       (cadr)))
 
 ;;;###autoload
 (defun orgmdb (&rest args)
@@ -96,7 +97,7 @@ Some call examples:
     (pcase (plist-get args :episode)
       ('all
        (let* ((response (json-read-from-string
-                         (orgmdb--request orgmdb-omdb-url `(,@req-params ("season" 1)))))
+                         (orgmdb--request orgmdb-omdb-url req-params)))
               (total-seasons (string-to-number (alist-get 'totalSeasons response)))
               (episodes '()))
          (dolist (current-season (number-sequence 1 total-seasons))
@@ -110,7 +111,7 @@ Some call examples:
               (json-read-from-string)
               (alist-get 'Episodes)
               (seq-map (lambda (it) (map-insert it 'Season (number-to-string current-season))))))))
-         (map-put! response 'Episodes episodes)
+         (setq response (map-insert response 'Episodes episodes))
          (map-delete response 'Season)))
       (episode
        (json-read-from-string
@@ -300,12 +301,18 @@ that this returns in the \"X/100\" format while
      (type-prop type-prop)
      (t (orgmdb--ask-for-type)))))
 
+(defun orgmdb--extract-imdb-id (str)
+  (when str
+    (when-let (match (s-match "tt[0-9]\\{7,8\\}" str))
+      (car match))))
+
 (defun orgmdb--detect-params-from-header ()
   "Get parameters for `orgmdb' function from current org header.
 If not on a org header, simpy ask from user."
   (interactive)
   (-let* ((header (or (org-entry-get nil "ITEM") ""))
-          (imdb-id (or (car (s-match "tt[0-9]\\{7,8\\}" header)) (org-entry-get nil "IMDB-ID")))
+          (imdb-id (or (orgmdb--extract-imdb-id header)
+                       (orgmdb--extract-imdb-id (org-entry-get nil "IMDB-ID"))))
           (type (when (not imdb-id)
                   (orgmdb--detect-type-from-header)))
           ((title year) (when (not imdb-id)
@@ -324,6 +331,7 @@ If not on a org header, simpy ask from user."
   (when (not (orgmdb-is-response-successful response))
     (user-error "The search did not return any results")))
 
+;; TODO use let-alist
 ;;;###autoload
 (defun orgmdb-movie-properties (&rest args)
   "Open new org-buffer containing movie info and poster of given ARGS.
@@ -334,15 +342,13 @@ detect parameters based on that heading.  If not, it'll simply ask
 for title and year.  See `orgmdb-fill-movie-properties' function
 for check how parameter detection works."
   (interactive (orgmdb--detect-params-from-header))
-  (let ((info (apply #'orgmdb args))
+  (let ((info (apply #'orgmdb `(,@args :episode all)))
         (poster-file (make-temp-file "~/.cache/orgmdb_poster_" nil ".jpg")))
     (orgmdb--ensure-response-is-successful info)
     (shell-command-to-string (format "curl '%s' > %s" (orgmdb-poster info) poster-file))
     (switch-to-buffer (format "*orgmdb: %s*" (orgmdb-title info)))
-    (org-mode)
-    (insert (format "* %s (%s)\n" (orgmdb-title info) (orgmdb-year info)))
+    (insert (format "* [[imdb:%s][%s]] (%s)\n" (orgmdb-imdb-id info) (orgmdb-title info) (orgmdb-year info)))
     (insert (format "[[file:%s]]\n\n" poster-file))
-    (org-display-inline-images)
     (insert (format "- Genre :: %s\n" (orgmdb-genre info)))
     (insert (format "- Rated :: %s\n" (orgmdb-rated info)))
     (insert (format "- Runtime :: %s\n" (orgmdb-runtime info)))
@@ -353,7 +359,30 @@ for check how parameter detection works."
     (insert (format "- Awards :: %s\n" (orgmdb-awards info)))
     (insert (format "- Metascore :: %s\n" (orgmdb-metascore info)))
     (insert (format "- IMDb Rating :: %s\n" (orgmdb-imdb-rating info)))
-    (insert (format "\n- Plot :: %s\n" (orgmdb-plot info)))))
+    (insert (format "\n- Plot :: %s\n" (orgmdb-plot info)))
+    (insert "\n")
+    (let (last-season)
+      (seq-do
+       (lambda (episode)
+         (let-alist episode
+           (let ((curr-season (string-to-number .Season)))
+             (insert (format "%s*** [[imdb:%s][S%02dE%02d - %s]]\n"
+                             (if (and last-season (eq curr-season last-season))
+                                 ""
+                               (setq last-season curr-season)
+                               (format "** Session %s\n" curr-season))
+                             .imdbID
+                             (string-to-number .Season)
+                             (string-to-number .Episode)
+                             .Title))
+             ;; TODO better formatting
+             (insert (format "%s\n" episode)))))
+       (alist-get 'Episodes info)))
+    (org-mode)
+    (org-display-inline-images)
+    (goto-char (point-min))
+    (outline-hide-sublevels 1)
+    (org-cycle)))
 
 (defun orgmdb--fill-properties (info should-set-title)
   (orgmdb--ensure-response-is-successful info)
@@ -529,19 +558,18 @@ detecting what to search for, it asks for IMDb id."
  :on '(show)
  :act (lambda (_ title imdb &rest _)
         (orgmdb--with-completing-read-exact-order
-         (let ((show (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)))
-           (->>
-            show
-            (alist-get 'Episodes)
-            (--map (let-alist it
-                     (cons (format "S%02dE%02d - %s"
-                                   (string-to-number .Season)
-                                   (string-to-number .Episode)
-                                   .Title)
-                           it)))
-            (completing-read "Select an episode: ")
-            ;; TODO Pass episode selector (SXXEXX) somehow or maybe pass the whole episode object
-            (orgmdb-act-on-episode))))))
+         (->>
+          (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)
+          (alist-get 'Episodes)
+          (--map (let-alist it
+                   (cons (format "S%02dE%02d - %s"
+                                 (string-to-number .Season)
+                                 (string-to-number .Episode)
+                                 .Title)
+                         it)))
+          (completing-read "Select an episode: ")
+          ;; TODO Pass episode selector (SXXEXX) somehow or maybe pass the whole episode object
+          (orgmdb-act-on-episode)))))
 
 ;; TODO list matches with video extensions only
 ;; TODO add option to play directly if one result is found
