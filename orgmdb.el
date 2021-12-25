@@ -497,11 +497,16 @@ detecting what to search for, it asks for IMDb id."
    (orgmdb :imdb (read-string "IMDb id: "))
    should-set-title))
 
+(defun orgmdb--extract-episode (str)
+  (-some->> str
+    (s-match orgmdb--episode-matcher)
+    (car)
+    (s-downcase)))
+
 (defun orgmdb--episode-at-point ()
-  (let ((title (org-entry-get nil "ITEM")))
-    (when-let (episode (or (and title (s-match orgmdb--episode-matcher title))
-                           (s-match orgmdb--episode-matcher (thing-at-point 'symbol))))
-      (s-downcase (car episode)))))
+  (or
+   (orgmdb--extract-episode (org-entry-get nil "ITEM"))
+   (orgmdb--extract-episode (thing-at-point 'symbol))))
 
 (defun orgmdb-act ()
   (interactive)
@@ -526,12 +531,12 @@ detecting what to search for, it asks for IMDb id."
   (interactive)
   (orgmdb--act-on 'show))
 
-(defun orgmdb-act-on-episode ()
+(defun orgmdb-act-on-episode (&optional episode)
   "List possible actions on the episode at point."
   (interactive)
-  (orgmdb--act-on 'episode))
+  (orgmdb--act-on 'episode (orgmdb--extract-episode episode)))
 
-(defun orgmdb--act-on (type)
+(defun orgmdb--act-on (type &rest args)
   (orgmdb--with-completing-read-exact-order
    (let* ((actions (symbol-value (intern (concat "orgmdb--" (symbol-name type) "-actions"))))
           (result (completing-read
@@ -543,7 +548,7 @@ detecting what to search for, it asks for IMDb id."
       (org-entry-get nil "ITEM")
       (org-entry-get nil "IMDB-ID")
       (when (equal type 'episode)
-        (orgmdb--episode-at-point))))))
+        (or (car args) (orgmdb--episode-at-point)))))))
 
 (cl-defun orgmdb-defaction (&key name on act definition)
   (--each on
