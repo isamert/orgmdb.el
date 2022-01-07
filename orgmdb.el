@@ -5,7 +5,7 @@
 ;; Author: Isa Mert Gurbuz <isamert@protonmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/isamert/orgmdb
-;; Package-Requires: ((emacs "25.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
+;; Package-Requires: ((emacs "27.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -47,7 +47,8 @@
   (if (boundp 'empv-video-dir)
       empv-video-dir
     "~/Videos")
-  "Socket file path."
+  "A folder containing your video collection. Used while searching
+for video files for given title."
   :type 'string
   :group 'orgmdb)
 
@@ -55,7 +56,8 @@
   (if (boundp 'empv-video-file-extensions)
       empv-video-file-extensions
     '("mkv" "mp4" "avi" "mov"))
-  "Socket file path."
+  "List of movie file extensions. Used while searching for video
+files for given title."
   :type 'list
   :group 'orgmdb)
 
@@ -440,7 +442,8 @@ for check how parameter detection works."
      (pcase (orgmdb-type info)
        ("movie" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("series" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
-       ("episode" (format "S%sE%s - %s" (orgmdb-season info) (orgmdb-episode info) (orgmdb-title info))))))
+       ("episode" (format "S%sE%s - %s" (orgmdb-season info) (orgmdb-episode info) (orgmdb-title info)))))
+    (org-toggle-tag (org-type info) 'on))
   (message "Done."))
 
 ;;;###autoload
@@ -554,33 +557,21 @@ detecting what to search for, it asks for IMDb id."
   (--each on
     (add-to-list
      (intern (concat "orgmdb--" (symbol-name it) "-actions"))
-     (cons definition act)))
-  ;; TODO define function orgmdb-NAME-action
-  )
+     (cons definition act))))
 
 (orgmdb-defaction
- :name 'search-torrent
- :definition "Search on 1337x.to"
+ :name 'show-detailed-info
+ :definition "Show detailed info"
  :on '(movie show episode)
- :act (lambda (type title imdb episode-selector)
-        (browse-url
-         (format "https://1337x.to/search/%s%s/1/"
-                 (->>
-                  title
-                  (s-downcase)
-                  (s-replace " " "+"))
-                 (pcase type
-                   ('episode (format "+%s" episode-selector))
-                   (_ ""))))))
+ :act (lambda (&rest _)
+        (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
 
 (orgmdb-defaction
- :name 'open-local-video
- :definition "Open local video"
+ :name 'fill-properties
+ :definition "Fill properties"
  :on '(movie show episode)
- :act (lambda (type title &rest _)
-        (pcase type
-          ((or 'movie 'show) (orgmdb--open-video title))
-          ('episode (orgmdb--open-video title episode)))))
+ :act (lambda (&rest _)
+        (orgmdb-fill-movie-properties t)))
 
 (orgmdb-defaction
  :name 'select-episode
@@ -601,18 +592,13 @@ detecting what to search for, it asks for IMDb id."
           (orgmdb-act-on-episode)))))
 
 (orgmdb-defaction
- :name 'show-detailed-info
- :definition "Fill properties"
+ :name 'open-local-video
+ :definition "Open local video"
  :on '(movie show episode)
- :act (lambda (&rest _)
-        (orgmdb-fill-movie-properties t)))
-
-(orgmdb-defaction
- :name 'show-detailed-info
- :definition "Show detailed info"
- :on '(movie show episode)
- :act (lambda (&rest _)
-        (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
+ :act (lambda (type title &rest _)
+        (pcase type
+          ((or 'movie 'show) (orgmdb--open-video title))
+          ('episode (orgmdb--open-video title episode)))))
 
 (defun orgmdb--open-video (name &optional episode)
   (interactive)
@@ -641,16 +627,6 @@ detecting what to search for, it asks for IMDb id."
   (if (require 'empv nil t)
       (empv-play path)
     (org-open-file path)))
-
-;;;###autoload
-(define-minor-mode orgmdb-mode
-  "A mode for interacting with movie/show lists."
-  :lighter " orgmdb"
-  :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c m o") #'orgmdb-act)
-            (define-key map (kbd "C-c m i") #'orgmdb-movie-properties)
-            (define-key map (kbd "C-c m f") #'orgmdb-fill-movie-properties)
-            map))
 
 (provide 'orgmdb)
 ;;; orgmdb.el ends here
