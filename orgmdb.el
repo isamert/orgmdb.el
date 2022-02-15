@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Isa Mert Gurbuz
 
 ;; Author: Isa Mert Gurbuz <isamert@protonmail.com>
-;; Version: 0.1
+;; Version: 0.5
 ;; URL: https://github.com/isamert/orgmdb
 ;; Package-Requires: ((emacs "27.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
 
@@ -88,6 +88,11 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 (defvar orgmdb--movie-actions '())
 (defvar orgmdb--show-actions '())
 (defvar orgmdb--episode-actions '())
+
+;; TODO REMOVE
+(setq orgmdb--movie-actions '())
+(setq orgmdb--show-actions '())
+(setq orgmdb--episode-actions '())
 
 (defconst orgmdb--episode-matcher "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}")
 
@@ -218,6 +223,12 @@ only returns these):
   (orgmdb--get 'imdbID r d))
 
 ;;;###autoload
+(defun orgmdb-imdb-link (r &optional d)
+  "Get imdb-id as a link in format [[imdb:ID]] from omdb response R
+and default to D it does not exits."
+  (format "[[imdb:%s]]" (orgmdb--get 'imdbID r d)))
+
+;;;###autoload
 (defun orgmdb-imdb-rating (r &optional d)
   "Get imdb-rating from omdb response R and default to D it does not exits."
   (orgmdb--get 'imdbRating r d))
@@ -328,6 +339,18 @@ that this returns in the \"X/100\" format while
   "Get tomatometer score from omdb response R and default to D it does not exits."
   (or (orgmdb--score-of "Rotten Tomatoes" r) d))
 
+(defun orgmdb--episode-to-marker (episode)
+  "Convert given EPISODE to S00E00 format."
+  (format "S%02dE%02d"
+          (string-to-number (orgmdb-season episode))
+          (string-to-number (orgmdb-episode episode))))
+
+(defun orgmdb--episode-to-title (episode)
+  "Convert given episode to `S00E00 - Title' format."
+  (format "%s - %s"
+          (orgmdb--episode-to-marker episode)
+          (orgmdb-title episode)))
+
 (defun orgmdb--ask-for-type ()
   "Simply ask for a type."
   (completing-read "Type: " orgmdb--types))
@@ -392,34 +415,41 @@ for check how parameter detection works."
     (orgmdb--ensure-response-is-successful info)
     (shell-command-to-string (format "curl '%s' > %s" (orgmdb-poster info) poster-file))
     (switch-to-buffer (format "*orgmdb: %s*" (orgmdb-title info)))
-    (insert (format "* [[imdb:%s][%s]] (%s)\n" (orgmdb-imdb-id info) (orgmdb-title info) (orgmdb-year info)))
+    (insert (format "#+TITLE: [[imdb:%s][%s]] (%s)\n" (orgmdb-imdb-id info) (orgmdb-title info) (orgmdb-year info)))
+    (insert "\n")
     (insert (format "[[file:%s]]\n\n" poster-file))
     (insert (format "- Genre :: %s\n" (orgmdb-genre info)))
-    (insert (format "- Rated :: %s\n" (orgmdb-rated info)))
     (insert (format "- Runtime :: %s\n" (orgmdb-runtime info)))
     (insert (format "- Released :: %s\n" (orgmdb-released info)))
+    (insert (format "- Rated :: %s\n" (orgmdb-rated info)))
+    (insert "\n")
     (insert (format "- Director :: %s\n" (orgmdb-director info)))
+    (insert (format "- Writer :: %s\n" (orgmdb-writer info)))
+    (insert (format "- Production :: %s\n" (orgmdb-writer info)))
     (insert (format "- Actors :: %s\n" (orgmdb-actors info)))
+    (insert "\n")
+    (insert (format "- Language :: %s\n" (orgmdb-language info)))
     (insert (format "- Country :: %s\n" (orgmdb-country info)))
     (insert (format "- Awards :: %s\n" (orgmdb-awards info)))
-    (insert (format "- Metascore :: %s\n" (orgmdb-metascore info)))
-    (insert (format "- IMDb Rating :: %s\n" (orgmdb-imdb-rating info)))
-    (insert (format "\n- Plot :: %s\n" (orgmdb-plot info)))
+    (insert "\n")
+    (insert (format "- Metacritic :: %s\n" (orgmdb-metacritic info)))
+    (insert (format "- IMDb Rating :: %s (%s votes)\n" (orgmdb-imdb-rating info) (orgmdb-imdb-votes info)))
+    (insert (format "- Tomatometer :: %s\n" (orgmdb-tomatometer info)))
+    (insert "\n")
+    (insert (format "- Plot :: %s\n" (orgmdb-plot info)))
     (insert "\n")
     (let (last-season)
       (seq-do
        (lambda (episode)
          (let-alist episode
            (let ((curr-season (string-to-number .Season)))
-             (insert (format "%s*** [[imdb:%s][S%02dE%02d - %s]]\n"
+             (insert (format "%s** [[imdb:%s][%s]]\n"
                              (if (and last-season (eq curr-season last-season))
                                  ""
                                (setq last-season curr-season)
-                               (format "** Session %s\n" curr-season))
+                               (format "* Session %s\n" curr-season))
                              .imdbID
-                             (string-to-number .Season)
-                             (string-to-number .Episode)
-                             .Title))
+                             (orgmdb--episode-to-title episode)))
              (insert (format "- IMDb Rating :: %s\n" .imdbRating))
              (insert (format "- Released :: %s\n" .Released))
              (insert "\n"))))
@@ -442,8 +472,8 @@ for check how parameter detection works."
      (pcase (orgmdb-type info)
        ("movie" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("series" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
-       ("episode" (format "S%sE%s - %s" (orgmdb-season info) (orgmdb-episode info) (orgmdb-title info)))))
-    (org-toggle-tag (org-type info) 'on))
+       ("episode" (orgmdb--episode-to-title info))))
+    (org-toggle-tag (orgmdb-type info) 'on))
   (message "Done."))
 
 ;;;###autoload
@@ -506,6 +536,7 @@ detecting what to search for, it asks for IMDb id."
     (car)
     (s-downcase)))
 
+;; TODO add show info
 (defun orgmdb--episode-at-point ()
   (or
    (orgmdb--extract-episode (org-entry-get nil "ITEM"))
@@ -537,7 +568,7 @@ detecting what to search for, it asks for IMDb id."
 (defun orgmdb-act-on-episode (&optional episode)
   "List possible actions on the episode at point."
   (interactive)
-  (orgmdb--act-on 'episode (orgmdb--extract-episode episode)))
+  (orgmdb--act-on 'episode :episode (orgmdb--extract-episode episode)))
 
 (defun orgmdb--act-on (type &rest args)
   (orgmdb--with-completing-read-exact-order
@@ -545,13 +576,14 @@ detecting what to search for, it asks for IMDb id."
           (result (completing-read
                    (format "Act on %s: " type)
                    actions)))
-     (funcall
+     (apply
       (cdr (assoc-string result actions))
       type
-      (org-entry-get nil "ITEM")
-      (org-entry-get nil "IMDB-ID")
-      (when (equal type 'episode)
-        (or (car args) (orgmdb--episode-at-point)))))))
+      (append
+       (list
+        :title (org-entry-get nil "ITEM")
+        :imdb-id (org-entry-get nil "IMDB-ID"))
+       args)))))
 
 (cl-defun orgmdb-defaction (&key name on act definition)
   (--each on
@@ -560,9 +592,38 @@ detecting what to search for, it asks for IMDb id."
      (cons definition act))))
 
 (orgmdb-defaction
+ :name 'open-local-video
+ :definition "Open local video"
+ :on '(movie show episode)
+ :act (cl-function
+       (lambda (type &key title episode &allow-other-keys)
+         (pcase type
+           ((or 'movie 'show) (orgmdb--open-video title))
+           ('episode (orgmdb--open-video title episode))))))
+
+(orgmdb-defaction
+ :name 'select-episode
+ :definition "Select an episode..."
+ :on '(show)
+ :act (cl-function
+       (lambda (type &key title imdb-id &allow-other-keys)
+         (orgmdb--with-completing-read-exact-order
+          (let* ((episodes
+                  (--map (cons (orgmdb--episode-to-title it) it)
+                         (alist-get 'Episodes (orgmdb :imdb imdb-id :episode 'all))))
+                 (selected-episode
+                  (->
+                   (completing-read "Select an episode: " episodes)
+                   (assoc-string episodes)
+                   (cdr))))
+            (orgmdb--act-on
+             'episode
+             :episode (orgmdb--episode-to-marker selected-episode)))))))
+
+(orgmdb-defaction
  :name 'show-detailed-info
  :definition "Show detailed info"
- :on '(movie show episode)
+ :on '(movie show)
  :act (lambda (&rest _)
         (apply #'orgmdb-movie-properties (orgmdb--detect-params-from-header))))
 
@@ -573,51 +634,29 @@ detecting what to search for, it asks for IMDb id."
  :act (lambda (&rest _)
         (orgmdb-fill-movie-properties t)))
 
-(orgmdb-defaction
- :name 'select-episode
- :definition "Select an episode..."
- :on '(show)
- :act (lambda (_ title imdb &rest _)
-        (orgmdb--with-completing-read-exact-order
-         (->>
-          (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)
-          (alist-get 'Episodes)
-          (--map (let-alist it
-                   (cons (format "S%02dE%02d - %s"
-                                 (string-to-number .Season)
-                                 (string-to-number .Episode)
-                                 .Title)
-                         it)))
-          (completing-read "Select an episode: ")
-          (orgmdb-act-on-episode)))))
-
-(orgmdb-defaction
- :name 'open-local-video
- :definition "Open local video"
- :on '(movie show episode)
- :act (lambda (type title &rest _)
-        (pcase type
-          ((or 'movie 'show) (orgmdb--open-video title))
-          ('episode (orgmdb--open-video title episode)))))
-
 (defun orgmdb--open-video (name &optional episode)
   (interactive)
+  (message ">>>>>>>>>name:%s>>>>>>>episode:%s" name episode)
   (let ((video-dir (expand-file-name orgmdb-video-dir)))
     (->>
      name
      (s-trim)
+     ((lambda (it) (string-trim-right it " *(.+)")))
+     (s-replace "'" " ")
      (s-replace " " "*")
      (s-downcase)
-     ((lambda (it) (string-trim-right it " *([0-9]+)")))
      ((lambda (it)
         (format "fd --absolute-path --type=file %s --glob '*%s*%s' %s"
                 (concat "--extension " (s-join " --extension " orgmdb-video-file-extensions))
                 it
-                (if episode (concat (s-downcase episode) "*") "")
+                (if (not (s-blank? episode))
+                    (concat (s-downcase episode) "*")
+                  "")
                 video-dir)))
      (shell-command-to-string)
      (s-trim)
      (s-split "\n")
+     (-filter (-compose #'not #'string-empty-p))
      (--map (s-replace (concat video-dir "/") "" it))
      (completing-read "Select file to play: ")
      (concat video-dir "/")
