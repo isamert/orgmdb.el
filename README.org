@@ -1,11 +1,12 @@
-* orgmdb.el
+#+TITLE: orgmdb.el
 
-I keep my watchlist in org-mode and this package makes metadata retrieving pretty easy through OMDb. The package is quite immature, I just copied functions from my Emacs config and called it a package.
+Tools for managing your watchlist in org-mode and some functions for interacting with [[http://www.omdbapi.com/][OMDb API]].
 
-** Installing
+* Installing
 Download the =orgmdb.el= and put it into your load path, then you can use it by =(require 'orgmdb)=.
 
 Another option is to use =use-package= and =quelpa=:
+
 #+begin_src elisp
   (use-package orgmdb
     :ensure t
@@ -14,14 +15,78 @@ Another option is to use =use-package= and =quelpa=:
              :repo "isamert/orgmdb.el"))
 #+end_src
 
-** Demo
-[[file:./orgmdb.gif]]
+Planned to be released on MELPA.
 
-** Usage
+* Demo
+** Displaying detailed movie information
+[[file:https://user-images.githubusercontent.com/8031017/154753759-5ddaca00-3245-433f-9c3a-13c1c48f5c01.gif]]
+
+** Filling movie metadata
+[[file:https://user-images.githubusercontent.com/8031017/154753756-5108bb8d-4dd0-457c-95df-9bae7a7ad17c.gif]]
+
+** Opening a local video
+[[file:https://user-images.githubusercontent.com/8031017/154756033-318e5482-67e5-4ae4-a40e-c29375faed58.gif]]
+
+* Configuration
 You need get yourself an API key to be able to use this package, see [[https://omdbapi.com/][OMDb website]]. After getting yourself an API key, you can start using.
 
 #+begin_src elisp
   (setq orgmdb-omdb-apikey "YOUR-API-KEY")
+#+end_src
+
+* Interactive usage
+~orgmdb.el~ offers several actions that you can call upon a movie/show/episode objects. These actions can be accessed by calling ~orgmdb-act~ function. A movie/show object is simply an org header with a tag, like the following:
+
+#+begin_src org
+  ,* Crouching Tiger, Hidden Dragon (2000) :movie:
+  ,* Succession (2018-) :series:
+#+end_src
+
+You can put your cursor on one of the headers and call ~orgmdb-act~. From the menu, you can select ~Fill movie properties~ to pull movie metadata under the ~:PROPERTIES:~ drawer of the selected header. From now on, you can use other actions defined under the ~orgmdb-act~ menu.
+
+An episode object is a special one, because it can be either a header containing an episode marker object (meaning something like ~S02E05~) with an ~:episode:~ tag:
+
+#+begin_src org
+  ,* Succession (2018-) :series:
+  ,** S01E08 - Prague :episode:
+#+end_src
+
+or it can be simply an episode marker object:
+
+#+begin_src org
+  ,* Succession (2018-) :series:
+  - ...
+  - I watched S01E08 yesterday and it was cool.
+  -           ^^^^^^ here is our episode marker object
+#+end_src
+
+In both cases, if your cursor is on the episode object, ~orgmdb-act~ will understand the context and show the actions accordingly.
+
+
+Here are the actions and their simple explanations:
+- ~Fill properties~ :: Fill the metadata of the current object.
+- ~Show detailed info~ :: Open a nicely formatted org buffer and display a detailed info of the current object with a small poster of it.
+- ~Select an episode...~ :: Select an episode of the currently focused show and act on it.
+- ~Open local video~ :: Find the local video file containing the current movie/show/episode. It searches video files under ~orgmdb-video-dir~ and looks for files with ~orgmdb-video-file-extensions~ extensions. ~orgmdb-player-function~ is used for opening the video file.
+
+** Defining new actions
+You can define new actions for movie/show/episode objects using ~orgmdb-defaction~ function. See the following example:
+
+#+begin_src emacs-lisp
+  (orgmdb-defaction
+   :name 'show-title
+   ;; ^ Define a unique name for this action
+   :definition "Show title of the currently selected object"
+   ;; ^ User-facing definition of the action
+   :on '(movie show episode)
+   ;; ^ On what objects this action should appear?
+   :act (cl-function
+         (lambda (type &key title imdb-id episode &allow-other-keys)
+           (message "The title is "))))
+#+end_src
+
+* Library usage
+#+begin_src elisp
   (let ((movie (orgmdb :title "in the mood for love")))
     (format "Movie name: %s, Year: %s, Plot: %s"
             (orgmdb-title movie)
@@ -29,7 +94,6 @@ You need get yourself an API key to be able to use this package, see [[https://o
             (orgmdb-plot movie)))
 #+end_src
 
-Another example:
 #+begin_src elisp
   (orgmdb :title "thinking of ending things" :year 2020)
 
@@ -46,8 +110,3 @@ Another example:
    (Language . "English, Spanish")
    (Country . "USA") ...)
 #+end_src
-
-There are also some other interactive functions that you can use, for example:
-
-- =orgmdb-movie-properties= :: Show all properties of a movie in a cute little org-mode buffer with a small poster. If you call this function on a org header, it'll search for header title in the OMDb. This is the function that you can see in the demo above.
-- =orgmdb-fill-movie-properties= :: Fetch and set preselected list of properties (see =orgmdb-fill-property-list=) to current org header. This is useful for having some metadata under your header so that you can filter/search etc. with those properties.
