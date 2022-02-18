@@ -89,11 +89,6 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 (defvar orgmdb--show-actions '())
 (defvar orgmdb--episode-actions '())
 
-;; TODO REMOVE
-(setq orgmdb--movie-actions '())
-(setq orgmdb--show-actions '())
-(setq orgmdb--episode-actions '())
-
 (defconst orgmdb--episode-matcher "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}")
 
 (defconst orgmdb--types '("movie" "series" "episode"))
@@ -536,11 +531,26 @@ detecting what to search for, it asks for IMDb id."
     (car)
     (s-downcase)))
 
-;; TODO add show info
-(defun orgmdb--episode-at-point ()
-  (or
-   (orgmdb--extract-episode (org-entry-get nil "ITEM"))
-   (orgmdb--extract-episode (thing-at-point 'symbol))))
+(defun orgmdb--info-at-point ()
+  `(:episode
+    ,(or (orgmdb--extract-episode (org-entry-get nil "ITEM"))
+         (orgmdb--extract-episode (thing-at-point 'symbol)))
+    ,@(save-excursion
+        (catch 'break
+          (while t
+            (if (--any?
+                 (-contains? (list orgmdb-show-tag orgmdb-movie-tag orgmdb-episode-tag) it)
+                 (org-get-tags nil t))
+                (throw
+                 'break
+                 (list
+                  :title (org-entry-get nil "ITEM")
+                  :imdb-id (org-entry-get nil "IMDB-ID")))
+              (when (not (ignore-errors
+                           (if (not (org-at-heading-p))
+                               (org-back-to-heading)
+                             (outline-up-heading 1 t))))
+                (throw 'break nil))))))))
 
 (defun orgmdb-act ()
   (interactive)
@@ -548,7 +558,7 @@ detecting what to search for, it asks for IMDb id."
         (title (org-entry-get nil "ITEM")))
     (cond
      ((or (-contains? tags orgmdb-episode-tag)
-          (orgmdb--episode-at-point))
+          (orgmdb--extract-episode (thing-at-point 'symbol)))
       (orgmdb-act-on-episode))
      ((-contains? tags orgmdb-movie-tag)
       (orgmdb-act-on-movie))
@@ -580,9 +590,7 @@ detecting what to search for, it asks for IMDb id."
       (cdr (assoc-string result actions))
       type
       (append
-       (list
-        :title (org-entry-get nil "ITEM")
-        :imdb-id (org-entry-get nil "IMDB-ID"))
+       (orgmdb--info-at-point)
        args)))))
 
 (cl-defun orgmdb-defaction (&key name on act definition)
@@ -636,7 +644,6 @@ detecting what to search for, it asks for IMDb id."
 
 (defun orgmdb--open-video (name &optional episode)
   (interactive)
-  (message ">>>>>>>>>name:%s>>>>>>>episode:%s" name episode)
   (let ((video-dir (expand-file-name orgmdb-video-dir)))
     (->>
      name
