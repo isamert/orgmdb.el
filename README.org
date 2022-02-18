@@ -74,7 +74,7 @@ You can define new actions for movie/show/episode objects using ~orgmdb-defactio
 
 #+begin_src emacs-lisp
   (orgmdb-defaction
-   :name 'show-title
+   :name 'show-info
    ;; ^ Define a unique name for this action
    :definition "Show title of the currently selected object"
    ;; ^ User-facing definition of the action
@@ -82,7 +82,7 @@ You can define new actions for movie/show/episode objects using ~orgmdb-defactio
    ;; ^ On what objects this action should appear?
    :act (cl-function
          (lambda (type &key title imdb-id episode &allow-other-keys)
-           (message "The title is "))))
+           (message "The title is %s, imdb-id is %s" title imdb-id))))
 #+end_src
 
 * Library usage
