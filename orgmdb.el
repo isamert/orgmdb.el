@@ -553,9 +553,11 @@ detecting what to search for, it asks for IMDb id."
                 (throw 'break nil))))))))
 
 (defun orgmdb-act ()
+  "Act on the current movie/series/episode object.
+It'll display several actions (like filling proprties etc.)
+related to the current object."
   (interactive)
-  (let ((tags (org-get-tags))
-        (title (org-entry-get nil "ITEM")))
+  (let ((tags (org-get-tags)))
     (cond
      ((or (-contains? tags orgmdb-episode-tag)
           (orgmdb--extract-episode (thing-at-point 'symbol)))
@@ -563,7 +565,12 @@ detecting what to search for, it asks for IMDb id."
      ((-contains? tags orgmdb-movie-tag)
       (orgmdb-act-on-movie))
      ((-contains? tags orgmdb-show-tag)
-      (orgmdb-act-on-show)))))
+      (orgmdb-act-on-show))
+     ((org-at-heading-p)
+      (org-set-tags (completing-read "What is this? " (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
+      (orgmdb-act))
+     (t
+      (user-error "Not on an org header or an episode object")))))
 
 (defun orgmdb-act-on-movie ()
   "List possible actions on the movie at point."
