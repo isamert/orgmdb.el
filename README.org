@@ -64,7 +64,7 @@ In both cases, if your cursor is on the episode object, ~orgmdb-act~ will unders
 
 
 Here are the actions and their simple explanations:
-- ~Fill properties~ :: Fill the metadata of the current object.
+- ~Fill properties~ :: Fill the metadata of the current object. See `orgmdb-fill-property-list` variable to control which properties gets filled in.
 - ~Show detailed info~ :: Open a nicely formatted org buffer and display a detailed info of the current object with a small poster of it.
 - ~Select an episode...~ :: Select an episode of the currently focused show and act on it.
 - ~Open local video~ :: Find the local video file containing the current movie/show/episode. It searches video files under ~orgmdb-video-dir~ and looks for files with ~orgmdb-video-file-extensions~ extensions. ~orgmdb-player-function~ is used for opening the video file.
