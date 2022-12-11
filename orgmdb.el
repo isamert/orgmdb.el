@@ -76,6 +76,12 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
   :type 'list
   :group 'orgmdb)
 
+(defcustom orgmdb-poster-folder
+  "~/.cache"
+  "Where should orgmdb download the poster files?"
+  :type 'file
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "http://www.omdbapi.com"
@@ -395,6 +401,24 @@ If not on a org header, simpy ask from user."
   (when (not (orgmdb-is-response-successful response))
     (user-error "The search did not return any results")))
 
+(defun orgmdb--download (path url)
+  "Download the image at the given URL and save it to the given PATH."
+  (with-current-buffer (url-retrieve-synchronously url)
+    (goto-char (point-min))
+    (search-forward "\n\n")
+    (delete-region (point-min) (point))
+    (write-file path)
+    (kill-buffer)))
+
+(defun orgmdb--download-image-for (info)
+  (let ((path (format "%s/orgmdb_poster_%s_%s.jpg"
+                      orgmdb-poster-folder
+                      (s-snake-case (orgmdb-title info))
+                      (orgmdb-year info))))
+    (unless (file-exists-p path)
+      (orgmdb--download path (orgmdb-poster info)))
+    path))
+
 ;;;###autoload
 (defun orgmdb-movie-properties (&rest args)
   "Open new org-buffer containing movie info and poster of given ARGS.
@@ -405,14 +429,12 @@ detect parameters based on that heading.  If not, it'll simply ask
 for title and year.  See `orgmdb-fill-movie-properties' function
 for check how parameter detection works."
   (interactive (orgmdb--detect-params-from-header))
-  (let ((info (apply #'orgmdb `(,@args :episode all :plot full)))
-        (poster-file (make-temp-file "~/.cache/orgmdb_poster_" nil ".jpg")))
+  (let ((info (apply #'orgmdb `(,@args :episode all :plot full))))
     (orgmdb--ensure-response-is-successful info)
-    (shell-command-to-string (format "curl '%s' > %s" (orgmdb-poster info) poster-file))
     (switch-to-buffer (format "*orgmdb: %s*" (orgmdb-title info)))
     (insert (format "#+TITLE: [[imdb:%s][%s]] (%s)\n" (orgmdb-imdb-id info) (orgmdb-title info) (orgmdb-year info)))
     (insert "\n")
-    (insert (format "[[file:%s]]\n\n" poster-file))
+    (insert (format "[[file:%s]]\n\n" (orgmdb--download-image-for info)))
     (insert (format "- Genre :: %s\n" (orgmdb-genre info)))
     (insert (format "- Runtime :: %s\n" (orgmdb-runtime info)))
     (insert (format "- Released :: %s\n" (orgmdb-released info)))
@@ -457,11 +479,20 @@ for check how parameter detection works."
 
 (defun orgmdb--fill-properties (info should-set-title)
   (orgmdb--ensure-response-is-successful info)
-  (--map (-as-> (format "orgmdb-%s" it) fn
-                (intern fn)
-                (apply fn `(,info "N/A"))
-                (org-entry-put nil (upcase (format "%s" it)) fn))
-         orgmdb-fill-property-list)
+  (--map
+   (-as-> (format "orgmdb-%s" it) fn
+          (intern fn)
+          (apply fn `(,info "N/A"))
+          (org-entry-put nil (upcase (format "%s" it)) fn))
+   (remq 'poster orgmdb-fill-property-list))
+  (when (memq 'poster orgmdb-fill-property-list)
+    (let ((path (orgmdb--download-image-for info)))
+      (save-excursion
+        (save-restriction
+          (org-narrow-to-subtree)
+          (org-end-of-meta-data)
+          (when (not (search-forward (format "[[file:%s]]" path) nil t))
+            (insert (format "\n#+ATTR_ORG: :width 300\n[[file:%s]]\n" path)))))))
   (when should-set-title
     (org-edit-headline
      (pcase (orgmdb-type info)
