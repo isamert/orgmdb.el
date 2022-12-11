@@ -67,14 +67,14 @@ files for given title."
   :type 'function
   :group 'orgmdb)
 
-
-;;;###autoload
-(defvar orgmdb-fill-property-list
+(defcustom orgmdb-fill-property-list
   '(genre runtime director imdb-id)
   "List of properties for `orgmdb-fill-movie-properties'.
 When `orgmdb-fill-movie-properties' is called, these properties will be
   fetched and set to the headers property drawer.  See `orgmdb-{property-name}'
-  functions for what the property names can be.")
+  functions for what the property names can be."
+  :type 'list
+  :group 'orgmdb)
 
 ;;;###autoload
 (defvar orgmdb-omdb-url
