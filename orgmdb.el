@@ -407,7 +407,7 @@ If not on a org header, simpy ask from user."
     (goto-char (point-min))
     (search-forward "\n\n")
     (delete-region (point-min) (point))
-    (write-file path)
+    (write-region nil nil path)
     (kill-buffer)))
 
 (defun orgmdb--download-image-for (info)
