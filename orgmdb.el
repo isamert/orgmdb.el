@@ -492,7 +492,8 @@ for check how parameter detection works."
           (org-narrow-to-subtree)
           (org-end-of-meta-data)
           (when (not (search-forward (format "[[file:%s]]" path) nil t))
-            (insert (format "\n#+ATTR_ORG: :width 300\n[[file:%s]]\n" path)))))))
+            (insert (format "\n#+ATTR_ORG: :width 300\n[[file:%s]]\n" path))
+            (org-redisplay-inline-images))))))
   (when should-set-title
     (org-edit-headline
      (pcase (orgmdb-type info)
