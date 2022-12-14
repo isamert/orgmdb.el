@@ -71,8 +71,42 @@ files for given title."
   '(genre runtime director imdb-id)
   "List of properties for `orgmdb-fill-movie-properties'.
 When `orgmdb-fill-movie-properties' is called, these properties will be
-  fetched and set to the headers property drawer.  See `orgmdb-{property-name}'
-  functions for what the property names can be."
+  fetched and set to the headers property drawer.  Possible properties are:
+
+- actors
+- awards
+- box-office
+- country
+- director
+- dvd
+- episode
+- genre
+- imdb
+- imdb-id
+- imdb-link
+- imdb-rating
+- imdb-votes
+- language
+- metacritic
+- metascore
+- play
+- plot
+- poster
+- production
+- rated
+- released
+- runtime
+- season
+- title
+- tomatometer
+- type
+- website
+- writer
+- year
+
+If you add `image' to this list, orgmdb will download and save
+the movie poster into `orgmdb-poster-folder' and embed it right
+under the header."
   :type 'list
   :group 'orgmdb)
 
