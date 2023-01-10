@@ -126,6 +126,11 @@ under the header."
   :type 'bool
   :group 'orgmdb)
 
+(defcustom orgmdb-imdb-link-format "[[https://www.imdb.com/title/%1$s][%1$s]]"
+  "Format used when inserting imdb-link."
+  :type 'string
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "http://www.omdbapi.com"
@@ -269,9 +274,9 @@ only returns these):
 
 ;;;###autoload
 (defun orgmdb-imdb-link (r &optional d)
-  "Get imdb-id as a link in format [[imdb:ID]] from omdb response R
-and default to D it does not exits."
-  (format "[[imdb:%s]]" (orgmdb--get 'imdbID r d)))
+  "Get imdb-id as a link in format `orgmdb-imdb-link-format'.
+If there is an omdb response R, insert it for %s, else insert D."
+  (format orgmdb-imdb-link-format (orgmdb--get 'imdbID r d)))
 
 ;;;###autoload
 (defun orgmdb-imdb-rating (r &optional d)
