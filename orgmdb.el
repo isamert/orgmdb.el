@@ -121,6 +121,11 @@ under the header."
   :type 'string
   :group 'orgmdb)
 
+(defcustom orgmb-upcase-properties t
+  "If non-nil property names are inserted in upper case."
+  :type 'bool
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "http://www.omdbapi.com"
@@ -522,7 +527,11 @@ for check how parameter detection works."
    (-as-> (format "orgmdb-%s" it) fn
           (intern fn)
           (apply fn `(,info "N/A"))
-          (org-entry-put nil (upcase (format "%s" it)) fn))
+          (org-entry-put nil
+			 (if orgmb-upcase-properties
+			     (upcase (format "%s" it))
+			   (format "%s" it))
+			 fn))
    (remq 'poster orgmdb-fill-property-list))
   (when (memq 'poster orgmdb-fill-property-list)
     (let ((path (orgmdb--download-image-for info)))
