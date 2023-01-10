@@ -116,6 +116,11 @@ under the header."
   :type 'file
   :group 'orgmdb)
 
+(defcustom orgmdb-type-prop nil
+  "If non-nil use this property for entry type instead of tags."
+  :type 'string
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "http://www.omdbapi.com"
@@ -398,7 +403,7 @@ that this returns in the \"X/100\" format while
 (defun orgmdb--detect-type-from-header ()
   "Detect whether current heading is a movie or a series or an episode."
   (interactive)
-  (let* ((type-prop (org-entry-get nil "TYPE"))
+  (let* ((type-prop (org-entry-get nil (or orgmdb-type-prop "TYPE")))
          (type-tag (--first (member it orgmdb--types) (org-get-tags))))
     (cond
      (type-tag type-tag)
@@ -534,7 +539,9 @@ for check how parameter detection works."
        ("movie" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("series" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("episode" (orgmdb--episode-to-title info))))
-    (org-toggle-tag (orgmdb-type info) 'on))
+    (if orgmdb-type-prop
+	(org-set-property orgmdb-type-prop (orgmdb-type info))
+      (org-toggle-tag (orgmdb-type info) 'on)))
   (message "Done."))
 
 ;;;###autoload
@@ -606,7 +613,9 @@ detecting what to search for, it asks for IMDb id."
           (while t
             (if (--any?
                  (-contains? (list orgmdb-show-tag orgmdb-movie-tag orgmdb-episode-tag) it)
-                 (org-get-tags nil t))
+                 (if orgmdb-type-prop
+		     (list (org-entry-get nil orgmdb-type-prop))
+		   (org-get-tags nil t)))
                 (throw
                  'break
                  (list
@@ -623,7 +632,9 @@ detecting what to search for, it asks for IMDb id."
 It'll display several actions (like filling proprties etc.)
 related to the current object."
   (interactive)
-  (let ((tags (org-get-tags)))
+  (let ((tags (if orgmdb-type-prop
+		  (list (org-entry-get nil orgmdb-type-prop))
+		(org-get-tags))))
     (cond
      ((or (-contains? tags orgmdb-episode-tag)
           (orgmdb--extract-episode (thing-at-point 'symbol)))
@@ -633,7 +644,12 @@ related to the current object."
      ((-contains? tags orgmdb-show-tag)
       (orgmdb-act-on-show))
      ((org-at-heading-p)
-      (org-set-tags (completing-read "What is this? " (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
+      (setq tags (completing-read
+		  "What is this? "
+		  (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
+      (if orgmdb-type-prop
+	  (org-set-property orgmdb-type-prop tags)
+	(org-set-tags tags))
       (orgmdb-act))
      (t
       (user-error "Not on an org header or an episode object")))))
