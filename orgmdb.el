@@ -46,10 +46,11 @@
 (defcustom orgmdb-video-dir
   (if (boundp 'empv-video-dir)
       empv-video-dir
-    "~/Videos")
-  "A folder containing your video collection. Used while searching
-for video files for given title."
-  :type 'string
+    (or (getenv "XDG_VIDEOS_DIR") "~/Videos"))
+  "A directory (or list of directories) containing your video collection.
+Used while searching for video files for given title."
+  :type '(choice (directory :tag "Video directory")
+                 (list :tag "List of video directories"))
   :group 'orgmdb)
 
 (defcustom orgmdb-video-file-extensions
@@ -747,7 +748,16 @@ related to the current object."
 
 (defun orgmdb--open-video (name &optional episode)
   (interactive)
-  (let ((video-dir (expand-file-name orgmdb-video-dir)))
+  (->>
+   (if (listp orgmdb-video-dir)
+       (--mapcat (orgmdb--search-video it name episode) orgmdb-video-dir)
+     (orgmdb--search-video orgmdb-video-dir name episode))
+   (completing-read "Select file to play: ")
+   (funcall orgmdb-player-function)))
+
+(defun orgmdb--search-video (dir name &optional episode)
+  (let ((video-dir (expand-file-name dir))
+        (user-dir (expand-file-name "~")))
     (->>
      name
      (s-trim)
@@ -767,11 +777,9 @@ related to the current object."
      (s-trim)
      (s-split "\n")
      (-filter (-compose #'not #'string-empty-p))
-     (--map (s-replace (concat video-dir "/") "" it))
-     (completing-read "Select file to play: ")
-     (concat video-dir "/")
-     (funcall orgmdb-player-function))))
+     (--map (replace-regexp-in-string (concat "^" user-dir) "~" it)))))
 
+(declare-function empv-play "empv")
 (defun orgmdb-play (path)
   (if (require 'empv nil t)
       (empv-play path)
