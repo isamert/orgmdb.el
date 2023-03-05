@@ -750,7 +750,7 @@ related to the current object."
   (interactive)
   (->>
    (if (listp orgmdb-video-dir)
-       (--mapcat (orgmdb--search-video it name episode) orgmdb-video-dir)
+       (--mapcat (orgmdb--search-video it name episode) (-filter #'file-directory-p orgmdb-video-dir))
      (orgmdb--search-video orgmdb-video-dir name episode))
    (completing-read "Select file to play: ")
    (funcall orgmdb-player-function)))
