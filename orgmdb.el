@@ -33,7 +33,7 @@
 (require 'json)
 
 (defgroup orgmdb nil
-  "An OMDb client and watchlist manager for Emacs/org-mode."
+  "An OMDb client and watchlist manager for `org-mode'."
   :group 'multimedia)
 
 ;;;###autoload
@@ -57,8 +57,8 @@ Used while searching for video files for given title."
   (if (boundp 'empv-video-file-extensions)
       empv-video-file-extensions
     '("mkv" "mp4" "avi" "mov"))
-  "List of movie file extensions. Used while searching for video
-files for given title."
+  "List of movie file extensions.
+Used while searching for video files for given title."
   :type 'list
   :group 'orgmdb)
 
@@ -308,7 +308,7 @@ that this returns in the \"X/100\" format while
 
 ;;;###autoload
 (defun orgmdb-tomatometer (r &optional d)
-  "Get tomatometer score from omdb response R and default to D if it does not exist."
+  "Get tomatometer score from R and default to D if it does not exist."
   (or (orgmdb--score-of "Rotten Tomatoes" r) d))
 
 (defun orgmdb--episode-to-marker (episode)
@@ -318,7 +318,7 @@ that this returns in the \"X/100\" format while
           (string-to-number (orgmdb-episode episode))))
 
 (defun orgmdb--episode-to-title (episode)
-  "Convert given episode to `S00E00 - Title' format."
+  "Convert given EPISODE to `S00E00 - Title' format."
   (format "%s - %s"
           (orgmdb--episode-to-marker episode)
           (orgmdb-title episode)))
@@ -517,7 +517,9 @@ org header using the following formats:
 (defun orgmdb-fill-movie-properties-with-title (should-set-title)
   "Fetch and set pre-defined properties to current org header.
 Like `orgmdb-fill-movie-properties' but instead of automatically
-detecting what to search for, it asks for title and year."
+detecting what to search for, it asks for title and year.  See
+`orgmdb-fill-movie-properties' documentation for what
+SHOULD-SET-TITLE does."
   (interactive "P")
   (-let ((type (orgmdb--ask-for-type))
          ((title year) (orgmdb--ask-for-title-and-year)))
@@ -529,7 +531,9 @@ detecting what to search for, it asks for title and year."
 (defun orgmdb-fill-movie-properties-with-imdb-id (should-set-title)
   "Fetch and set pre-defined properties to current org header.
 Like `orgmdb-fill-movie-properties' but instead of automatically
-detecting what to search for, it asks for IMDb id."
+detecting what to search for, it asks for IMDb id.  See
+`orgmdb-fill-movie-properties' documentation for what
+SHOULD-SET-TITLE does."
   (interactive "P")
   (orgmdb--fill-properties
    (orgmdb :imdb (read-string "IMDb id: "))
@@ -602,7 +606,7 @@ related to the current object."
   (orgmdb--act-on 'show))
 
 (defun orgmdb-act-on-episode (&optional episode)
-  "List possible actions on the episode at point."
+  "List possible actions on the EPISODE at point."
   (interactive)
   (orgmdb--act-on 'episode :episode (orgmdb--extract-episode episode)))
 
