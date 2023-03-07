@@ -263,40 +263,26 @@ only returns these):
    (seq-find (lambda (it) (s-equals? (alist-get 'Source it) rating-type)))
    (alist-get 'Value)))
 
-;;;###autoload
-(defun orgmdb-title (r &optional d)
-  "Get title from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Title r d))
+(defmacro orgmdb--def-getters (&rest symbols)
+  `(progn
+     ,@(mapcar (lambda (sym)
+                 `(defun ,(intern
+                       (format "orgmdb-%s"
+                               (s-join
+                                "-"
+                                (mapcar #'downcase (s-split-words (symbol-name sym))))))
+                      (r &optional d)
+                    ,(format "Get `%s' from OMBD response R and default to D if it does not exist." sym)
+                    (orgmdb--get ',sym r d)
+                    ))
+               symbols)))
 
-;;;###autoload
-(defun orgmdb-year (r &optional d)
-  "Get year from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Year r d))
-
-;;;###autoload
-(defun orgmdb-genre (r &optional d)
-  "Get genre from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Genre r d))
-
-;;;###autoload
-(defun orgmdb-rated (r &optional d)
-  "Get rated from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Rated r d))
-
-;;;###autoload
-(defun orgmdb-runtime (r &optional d)
-  "Get runtime from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Runtime r d))
-
-;;;###autoload
-(defun orgmdb-released (r &optional d)
-  "Get released from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Released r d))
-
-;;;###autoload
-(defun orgmdb-imdb-id (r &optional d)
-  "Get imdb-id from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'imdbID r d))
+(orgmdb--def-getters
+ Title Year Genre Rated Runtime
+ Released imdbID imdbRating Poster Director
+ Actors Plot Country Language imdbVotes
+ DVD BoxOffice Production Website Awards
+ Type Season Episode Metascore Writer)
 
 ;;;###autoload
 (defun orgmdb-imdb-link (r &optional d)
@@ -305,102 +291,12 @@ If there is an omdb response R, insert it for %s, else insert D."
   (format orgmdb-imdb-link-format (orgmdb--get 'imdbID r d)))
 
 ;;;###autoload
-(defun orgmdb-imdb-rating (r &optional d)
-  "Get imdb-rating from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'imdbRating r d))
-
-;;;###autoload
 (defun orgmdb-imdb (r &optional d)
   "Get IMDb score from omdb response R and default to D if it does not exist.
 The difference between this function and `orgmdb-imdb-rating' is
 that this returns in the \"X/10\" format while
 `orgmdb-imdb-rating' returns just \"X\"."
   (or (orgmdb--score-of "Internet Movie Database" r) d))
-
-;;;###autoload
-(defun orgmdb-poster (r &optional d)
-  "Get poster from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Poster r d))
-
-;;;###autoload
-(defun orgmdb-director (r &optional d)
-  "Get director from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Director r d))
-
-;;;###autoload
-(defun orgmdb-actors (r &optional d)
-  "Get actors from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Actors r d))
-
-;;;###autoload
-(defun orgmdb-plot (r &optional d)
-  "Get plot from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Plot r d))
-
-;;;###autoload
-(defun orgmdb-country (r &optional d)
-  "Get country from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Country r d))
-
-;;;###autoload
-(defun orgmdb-language (r &optional d)
-  "Get language from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Language r d))
-
-;;;###autoload
-(defun orgmdb-imdb-votes (r &optional d)
-  "Get IMDb vote count from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'imdbVotes r d))
-
-;;;###autoload
-(defun orgmdb-dvd (r &optional d)
-  "Get DVD release date from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'DVD r d))
-
-;;;###autoload
-(defun orgmdb-box-office (r &optional d)
-  "Get box office from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'BoxOffice r d))
-
-;;;###autoload
-(defun orgmdb-production (r &optional d)
-  "Get production firm from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Production r d))
-
-;;;###autoload
-(defun orgmdb-website (r &optional d)
-  "Get website from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Website r d))
-
-;;;###autoload
-(defun orgmdb-awards (r &optional d)
-  "Get awards from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Awards r d))
-
-;;;###autoload
-(defun orgmdb-type (r &optional d)
-  "Get type from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Type r d))
-
-;;;###autoload
-(defun orgmdb-season (r &optional d)
-  "Get season from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Season r d))
-
-;;;###autoload
-(defun orgmdb-episode (r &optional d)
-  "Get episode from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Episode r d))
-
-;;;###autoload
-(defun orgmdb-metascore (r &optional d)
-  "Get metascore from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Metascore r d))
-
-;;;###autoload
-(defun orgmdb-writer (r &optional d)
-  "Get writer from omdb response R and default to D if it does not exist."
-  (orgmdb--get 'Writer r d))
 
 ;;;###autoload
 (defun orgmdb-metacritic (r &optional d)
