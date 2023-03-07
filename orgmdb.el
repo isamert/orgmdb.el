@@ -122,7 +122,7 @@ under the header."
   :type 'string
   :group 'orgmdb)
 
-(defcustom orgmb-upcase-properties t
+(defcustom orgmdb-upcase-properties t
   "If non-nil property names are inserted in upper case."
   :type 'bool
   :group 'orgmdb)
@@ -141,19 +141,13 @@ under the header."
 (defvar orgmdb-movie-tag "movie")
 (defvar orgmdb-episode-tag "episode")
 
-(defvar orgmdb--movie-actions '())
-(defvar orgmdb--show-actions '())
-(defvar orgmdb--episode-actions '())
+(defvar orgmdb--movie-actions (make-hash-table :size 10))
+(defvar orgmdb--show-actions (make-hash-table :size 10))
+(defvar orgmdb--episode-actions (make-hash-table :size 10))
 
 (defconst orgmdb--episode-matcher "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}")
 
 (defconst orgmdb--types '("movie" "series" "episode"))
-
-(defmacro orgmdb--with-completing-read-exact-order (&rest body)
-  "Disable any kind of sorting in completing read."
-  `(let ((selectrum-should-sort nil)
-         (vertico-sort-function nil))
-     ,@body))
 
 (defun orgmdb--url-retrieve-sync (url)
   "Retrieve URL synchronously as string."
@@ -173,17 +167,48 @@ PARAMS should be an alist.  Pairs with nil values are skipped."
        (s-split "\n\n")
        (cadr)))
 
+(cl-defun orgmdb--completing-read-object
+    (prompt objects &key (formatter #'identity) category (sort? t) def multiple?)
+  "`completing-read' with formatter and sort control.
+Applies FORMATTER to every object in OBJECTS Also adds CATEGORY
+metadata to each candidate, if given.  PROMPT passed to
+`completing-read' as is."
+  (let* ((object-table
+          (make-hash-table :test 'equal :size (length objects)))
+         (object-strings
+          (mapcar
+           (lambda (object)
+             (let ((formatted-object (funcall formatter object)))
+               (puthash formatted-object object object-table)))
+           objects))
+         (selected
+          (funcall
+           (if multiple? #'completing-read-multiple #'completing-read)
+           (format "%s " prompt)
+           (lambda (string predicate action)
+             (if (eq action 'metadata)
+                 `(metadata
+                   ,(when category (cons 'category category))
+                   ,@(unless sort?
+                       '((display-sort-function . identity)
+                         (cycle-sort-function . identity))))
+               (complete-with-action
+                action object-strings string predicate))))))
+    (if multiple?
+        (or (mapcar (lambda (it) (gethash it object-table)) selected) def)
+      (gethash selected object-table def))))
+
 ;;;###autoload
 (cl-defun orgmdb (&key title imdb year type season episode plot)
   "Search for a movie in OMDb with ARGS.
 Some call examples:
   (orgmdb :title \"in the mood for love\")
   (orgmdb :title \"in the mood for love\" :year 2000)
-  (orgmdb :title \"in the mood for love\" :type 'movie)
+  (orgmdb :title \"in the mood for love\" :type \\='movie)
   (orgmdb :imdb \"tt0118694\")
   (orgmdb :imdb \"tt10574558\" :season 1)
   (orgmdb :imdb \"tt10574558\" :season 1 :episode 3)
-  (orgmdb :imdb \"tt0944947\" :episode 'all)"
+  (orgmdb :imdb \"tt0944947\" :episode \\='all)"
   (let* ((req-params
           `(("t" ,title)
             ("i" ,imdb)
@@ -529,16 +554,17 @@ for check how parameter detection works."
 
 (defun orgmdb--fill-properties (info should-set-title)
   (orgmdb--ensure-response-is-successful info)
-  (--map
-   (-as-> (format "orgmdb-%s" it) fn
-          (intern fn)
-          (apply fn `(,info "N/A"))
-          (org-entry-put nil
-			 (if orgmb-upcase-properties
-			     (upcase (format "%s" it))
-			   (format "%s" it))
-			 fn))
-   (remq 'poster orgmdb-fill-property-list))
+  (--each
+      (remq 'poster orgmdb-fill-property-list)
+    (-as->
+     (format "orgmdb-%s" it) fn
+     (intern fn)
+     (apply fn `(,info "N/A"))
+     (org-entry-put nil
+                    (if orgmdb-upcase-properties
+                        (upcase (format "%s" it))
+                      (format "%s" it))
+                    fn)))
   (when (memq 'poster orgmdb-fill-property-list)
     (let ((path (orgmdb--download-image-for info)))
       (save-excursion
@@ -555,7 +581,7 @@ for check how parameter detection works."
        ("series" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("episode" (orgmdb--episode-to-title info))))
     (if orgmdb-type-prop
-	(org-set-property orgmdb-type-prop (orgmdb-type info))
+        (org-set-property orgmdb-type-prop (orgmdb-type info))
       (org-toggle-tag (orgmdb-type info) 'on)))
   (message "Done."))
 
@@ -629,8 +655,8 @@ detecting what to search for, it asks for IMDb id."
             (if (--any?
                  (-contains? (list orgmdb-show-tag orgmdb-movie-tag orgmdb-episode-tag) it)
                  (if orgmdb-type-prop
-		     (list (org-entry-get nil orgmdb-type-prop))
-		   (org-get-tags nil t)))
+                     (list (org-entry-get nil orgmdb-type-prop))
+                   (org-get-tags nil t)))
                 (throw
                  'break
                  (list
@@ -648,8 +674,8 @@ It'll display several actions (like filling proprties etc.)
 related to the current object."
   (interactive)
   (let ((tags (if orgmdb-type-prop
-		  (list (org-entry-get nil orgmdb-type-prop))
-		(org-get-tags))))
+                  (list (org-entry-get nil orgmdb-type-prop))
+                (org-get-tags))))
     (cond
      ((or (-contains? tags orgmdb-episode-tag)
           (orgmdb--extract-episode (thing-at-point 'symbol)))
@@ -660,11 +686,11 @@ related to the current object."
       (orgmdb-act-on-show))
      ((org-at-heading-p)
       (setq tags (completing-read
-		  "What is this? "
-		  (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
+                  "What is this? "
+                  (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
       (if orgmdb-type-prop
-	  (org-set-property orgmdb-type-prop tags)
-	(org-set-tags tags))
+          (org-set-property orgmdb-type-prop tags)
+        (org-set-tags tags))
       (orgmdb-act))
      (t
       (user-error "Not on an org header or an episode object")))))
@@ -685,23 +711,23 @@ related to the current object."
   (orgmdb--act-on 'episode :episode (orgmdb--extract-episode episode)))
 
 (defun orgmdb--act-on (type &rest args)
-  (orgmdb--with-completing-read-exact-order
-   (let* ((actions (symbol-value (intern (concat "orgmdb--" (symbol-name type) "-actions"))))
-          (result (completing-read
-                   (format "Act on %s: " type)
-                   actions)))
-     (apply
-      (cdr (assoc-string result actions))
-      type
-      (append
-       (orgmdb--info-at-point)
-       args)))))
+  (apply
+   (cdr (orgmdb--completing-read-object
+         (format "Act on %s: " 'movie)
+         (map-values (symbol-value (intern (concat "orgmdb--" (symbol-name type) "-actions"))))
+         :formatter #'car
+         :sort? nil))
+   type
+   (append
+    (orgmdb--info-at-point)
+    args)))
 
 (cl-defun orgmdb-defaction (&key name on act definition)
   (--each on
-    (add-to-list
-     (intern (concat "orgmdb--" (symbol-name it) "-actions"))
-     (cons definition act))))
+    (puthash
+     name
+     (cons definition act)
+     (symbol-value (intern (concat "orgmdb--" (symbol-name it) "-actions"))))))
 
 (orgmdb-defaction
  :name 'open-local-video
@@ -718,19 +744,19 @@ related to the current object."
  :definition "Select an episode..."
  :on '(show)
  :act (cl-function
-       (lambda (type &key title imdb-id &allow-other-keys)
-         (orgmdb--with-completing-read-exact-order
-          (let* ((episodes
-                  (--map (cons (orgmdb--episode-to-title it) it)
-                         (alist-get 'Episodes (orgmdb :imdb imdb-id :episode 'all))))
-                 (selected-episode
-                  (->
-                   (completing-read "Select an episode: " episodes)
-                   (assoc-string episodes)
-                   (cdr))))
-            (orgmdb--act-on
-             'episode
-             :episode (orgmdb--episode-to-marker selected-episode)))))))
+       (lambda (_type &key imdb-id &allow-other-keys)
+         (let* ((episodes
+                 (--map (cons (orgmdb--episode-to-title it) it)
+                        (alist-get 'Episodes (orgmdb :imdb imdb-id :episode 'all))))
+                (selected-episode
+                 (cdr (orgmdb--completing-read-object
+                       "Select an episode: "
+                       episodes
+                       :formatter #'car
+                       :sort? nil))))
+           (orgmdb--act-on
+            'episode
+            :episode (orgmdb--episode-to-marker selected-episode))))))
 
 (orgmdb-defaction
  :name 'show-detailed-info
