@@ -273,8 +273,7 @@ only returns these):
                                 (mapcar #'downcase (s-split-words (symbol-name sym))))))
                       (r &optional d)
                     ,(format "Get `%s' from OMBD response R and default to D if it does not exist." sym)
-                    (orgmdb--get ',sym r d)
-                    ))
+                    (orgmdb--get ',sym r d)))
                symbols)))
 
 (orgmdb--def-getters
