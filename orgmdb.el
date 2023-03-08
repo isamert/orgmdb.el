@@ -619,8 +619,8 @@ related to the current object."
          :sort? nil))
    type
    (append
-    (orgmdb--info-at-point)
-    args)))
+    args
+    (orgmdb--info-at-point))))
 
 (cl-defun orgmdb-defaction (&key name on act definition)
   (--each on
@@ -681,6 +681,13 @@ related to the current object."
    (completing-read "Select file to play: ")
    (funcall orgmdb-player-function)))
 
+(defun orgmdb--run-command (program &rest args)
+  "Run PROGRAM synchronously and return it's output.
+ARGS are strings passed as command arguments to PROGRAM."
+  (with-temp-buffer
+    (apply #'call-process program nil t nil args)
+    (buffer-string)))
+
 (defun orgmdb--search-video (dir name &optional episode)
   (let ((video-dir (expand-file-name dir))
         (user-dir (expand-file-name "~")))
@@ -691,15 +698,13 @@ related to the current object."
      (s-replace "'" " ")
      (s-replace " " "*")
      (s-downcase)
-     ((lambda (it)
-        (format "fd --absolute-path --type=file %s --glob '*%s*%s' %s"
-                (concat "--extension " (s-join " --extension " orgmdb-video-file-extensions))
-                it
-                (if (not (s-blank? episode))
-                    (concat (s-downcase episode) "*")
-                  "")
-                video-dir)))
-     (shell-command-to-string)
+     ((lambda (name)
+        `("fd" "--absolute-path" "--type=file"
+          ,@(--map (format "--extension=%s" it) orgmdb-video-file-extensions)
+          "--glob"
+          ,(format "*%s*%s" name (if (not (s-blank? episode)) (concat (s-downcase episode) "*") ""))
+          ,video-dir)))
+     (apply #'orgmdb--run-command)
      (s-trim)
      (s-split "\n")
      (-filter (-compose #'not #'string-empty-p))
