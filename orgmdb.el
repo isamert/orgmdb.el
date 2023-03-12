@@ -22,7 +22,8 @@
 
 ;;; Commentary:
 
-;; Simple mode to interact with OMDb API with some extra convenient functions.
+;; Tools for managing your watchlist in org-mode and some functions
+;; for interacting with OMDb API.
 
 ;;; Code:
 

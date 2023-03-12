@@ -28,7 +28,7 @@ Planned to be released on MELPA.
 [[file:https://user-images.githubusercontent.com/8031017/154756033-318e5482-67e5-4ae4-a40e-c29375faed58.gif]]
 
 * Configuration
-You need get yourself an API key to be able to use this package, see [[https://omdbapi.com/][OMDb website]]. After getting yourself an API key, you can start using.
+You need get yourself an API key to be able to use this package, see [[https://omdbapi.com/][OMDb website]]. After getting yourself an API key, you can start using by doing:
 
 #+begin_src elisp
   (setq orgmdb-omdb-apikey "YOUR-API-KEY")
