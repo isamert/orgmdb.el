@@ -333,7 +333,6 @@ that this returns in the \"X/100\" format while
 
 (defun orgmdb--detect-type-from-header ()
   "Detect whether current heading is a movie or a series or an episode."
-  (interactive)
   (let* ((type-prop (org-entry-get nil (or orgmdb-type-prop "TYPE")))
          (type-tag (--first (member it orgmdb--types) (org-get-tags))))
     (cond
@@ -349,7 +348,6 @@ that this returns in the \"X/100\" format while
 (defun orgmdb--detect-params-from-header ()
   "Get parameters for `orgmdb' function from current org header.
 If not on a org header, simpy ask from user."
-  (interactive)
   (-let* ((header (or (org-entry-get nil "ITEM") ""))
           (imdb-id (or (orgmdb--extract-imdb-id header)
                        (orgmdb--extract-imdb-id (org-entry-get nil "IMDB-ID"))))
@@ -672,7 +670,6 @@ related to the current object."
         (orgmdb-fill-movie-properties t)))
 
 (defun orgmdb--open-video (name &optional episode)
-  (interactive)
   (->>
    (if (listp orgmdb-video-dir)
        (--mapcat (orgmdb--search-video it name episode) (-filter #'file-directory-p orgmdb-video-dir))
