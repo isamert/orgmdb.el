@@ -202,7 +202,15 @@ metadata to each candidate, if given.  PROMPT passed to
 ;;;###autoload
 (cl-defun orgmdb (&key title imdb year type season episode plot)
   "Search for a movie in OMDb with ARGS.
-Some call examples:
+
+All parameters, TITLE IMDB YEAR TYPE SEASON EPISODE PLOT, are
+optional but you need to provide at least one of TITLE or IMDB.
+
+EPISODE can be a number or \\='all which makes this function to
+retrieve all episode information for the show (not just for the
+SEASON).
+
+Examples:
   (orgmdb :title \"in the mood for love\")
   (orgmdb :title \"in the mood for love\" :year 2000)
   (orgmdb :title \"in the mood for love\" :type \\='movie)
