@@ -1,13 +1,21 @@
 #+TITLE: orgmdb.el
 
+[[https://melpa.org/#/orgmdb][file:https://melpa.org/packages/orgmdb-badge.svg]]
+
 Tools for managing your watchlist in org-mode and some functions for interacting with [[http://www.omdbapi.com/][OMDb API]].
 
-* Installing
-Download the =orgmdb.el= and put it into your load path, then you can use it by =(require 'orgmdb)=.
+* Installation
+orgmdb is available through [[https://melpa.org/#/orgmdb][MELPA]]. If you have it set up already, just do ~M-x package-install orgmdb~ and you are good to go. Otherwise please see [[https://melpa.org/#/getting-started][MELPA getting started]] page to learn how you can install packages through MELPA or see the following installation options.
 
-Another option is to use =use-package= and =quelpa=:
+Another way to install orgmdb would be using either [[https://github.com/radian-software/straight.el][straight]] or [[https://github.com/quelpa/quelpa-use-package][quelpa]] package managers:
 
 #+begin_src elisp
+  ;; Using straight:
+  (use-package orgmdb
+    :ensure t
+    :straight (:host github :repo "isamert/orgmdb.el"))
+
+  ;; Using quelpa:
   (use-package orgmdb
     :ensure t
     :quelpa (orgmdb
@@ -15,7 +23,11 @@ Another option is to use =use-package= and =quelpa=:
              :repo "isamert/orgmdb.el"))
 #+end_src
 
-Planned to be released on MELPA.
+Yet another option is just downloading =orgmdb.el= file and putting into your =load-path=, afterwards you can simply do the following in your =init.el=:
+
+#+begin_src elisp
+  (require 'orgmdb)
+#+end_src
 
 * Demo
 ** Displaying detailed movie information
