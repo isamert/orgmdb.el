@@ -135,7 +135,7 @@ under the header."
 
 ;;;###autoload
 (defvar orgmdb-omdb-url
-  "http://www.omdbapi.com"
+  "https://www.omdbapi.com"
   "OMDb URL.")
 
 (defvar orgmdb-show-tag "series")
