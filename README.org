@@ -7,20 +7,16 @@ Tools for managing your watchlist in org-mode and some functions for interacting
 * Installation
 orgmdb is available through [[https://melpa.org/#/orgmdb][MELPA]]. If you have it set up already, just do ~M-x package-install orgmdb~ and you are good to go. Otherwise please see [[https://melpa.org/#/getting-started][MELPA getting started]] page to learn how you can install packages through MELPA or see the following installation options.
 
-Another way to install orgmdb would be using either [[https://github.com/radian-software/straight.el][straight]] or [[https://github.com/quelpa/quelpa-use-package][quelpa]] package managers:
+Another way to install =orgmdb.el= would be using either [[https://github.com/radian-software/straight.el][straight]] or [[https://github.com/quelpa/quelpa-use-package][quelpa]] package managers:
 
 #+begin_src elisp
   ;; Using straight:
   (use-package orgmdb
-    :ensure t
     :straight (:host github :repo "isamert/orgmdb.el"))
 
   ;; Using quelpa:
   (use-package orgmdb
-    :ensure t
-    :quelpa (orgmdb
-             :fetcher github
-             :repo "isamert/orgmdb.el"))
+    :quelpa (orgmdb :fetcher github :repo "isamert/orgmdb.el"))
 #+end_src
 
 Yet another option is just downloading =orgmdb.el= file and putting into your =load-path=, afterwards you can simply do the following in your =init.el=:
