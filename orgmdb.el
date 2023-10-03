@@ -133,22 +133,31 @@ under the header."
   :type 'string
   :group 'orgmdb)
 
+(defcustom orgmdb-movie-tag "movie"
+  "Tag name used to identify an org header as a movie object."
+  :type 'string
+  :group 'orgmdb)
+
+(defcustom orgmdb-show-tag "series"
+  "Tag name used to identify an org header as a show object."
+  :type 'string
+  :group 'orgmdb)
+
+(defcustom orgmdb-episode-tag "episode"
+  "Tag name used to identify an org header as an episode object."
+  :type 'string
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "https://www.omdbapi.com"
   "OMDb URL.")
-
-(defvar orgmdb-show-tag "series")
-(defvar orgmdb-movie-tag "movie")
-(defvar orgmdb-episode-tag "episode")
 
 (defvar orgmdb--movie-actions (make-hash-table :size 10))
 (defvar orgmdb--show-actions (make-hash-table :size 10))
 (defvar orgmdb--episode-actions (make-hash-table :size 10))
 
 (defconst orgmdb--episode-matcher "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}")
-
-(defconst orgmdb--types '("movie" "series" "episode"))
 
 (defun orgmdb--url-retrieve-sync (url)
   "Retrieve URL synchronously as string."
@@ -222,7 +231,7 @@ Examples:
           `(("t" ,title)
             ("i" ,imdb)
             ("y" ,year)
-            ("type" ,type)
+            ("type" ,(when type (orgmdb--map-user-tag-to-omdb-type type)))
             ("season" ,season)
             ("plot" ,plot)
             ("apikey" ,(s-trim orgmdb-omdb-apikey)))))
@@ -333,21 +342,39 @@ that this returns in the \"X/100\" format while
 
 (defun orgmdb--ask-for-type ()
   "Simply ask for a type."
-  (completing-read "Type: " orgmdb--types))
+  (completing-read "Type: " (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
 
 (defun orgmdb--ask-for-title-and-year ()
   "Simply ask for title and year from interactively."
   `(,(read-string "Title: ")
     ,(read-string "Year (can be empty): ")))
 
-(defun orgmdb--detect-type-from-header ()
-  "Detect whether current heading is a movie or a series or an episode."
+(defun orgmdb--map-user-tag-to-omdb-type (user-tag)
+  (or
+   (cond
+    ((equal user-tag orgmdb-movie-tag) "movie")
+    ((equal user-tag orgmdb-show-tag) "series")
+    ((equal user-tag orgmdb-episode-tag) "episode"))
+   user-tag))
+
+(defun orgmdb--map-omdb-type-to-user-tag (omdb-type)
+  (or
+   (pcase omdb-type
+     ("movie" orgmdb-movie-tag)
+     ("series" orgmdb-show-tag)
+     ("episode" orgmdb-episode-tag))
+   omdb-type))
+
+(defun orgmdb--detect-type-from-header (&optional ask?)
+  "Detect whether current heading is a movie or a series or an episode.
+If the type can not be detected, ask the user for the type if
+ASK? is non-nil."
   (let* ((type-prop (org-entry-get nil (or orgmdb-type-prop "TYPE")))
-         (type-tag (--first (member it orgmdb--types) (org-get-tags))))
+         (type-tag (--first (member it (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)) (org-get-tags))))
     (cond
      (type-tag type-tag)
      (type-prop type-prop)
-     (t (orgmdb--ask-for-type)))))
+     (ask? (orgmdb--ask-for-type)))))
 
 (defun orgmdb--extract-imdb-id (str)
   (when str
@@ -361,7 +388,7 @@ If not on a org header, simpy ask from user."
           (imdb-id (or (orgmdb--extract-imdb-id header)
                        (orgmdb--extract-imdb-id (org-entry-get nil "IMDB-ID"))))
           (type (when (not imdb-id)
-                  (orgmdb--detect-type-from-header)))
+                  (orgmdb--detect-type-from-header t)))
           ((title year) (when (not imdb-id)
                           (if (s-blank? header)
                               (orgmdb--ask-for-title-and-year)
@@ -482,9 +509,12 @@ for check how parameter detection works."
        ("movie" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("series" (format "%s (%s)" (orgmdb-title info) (orgmdb-year info)))
        ("episode" (orgmdb--episode-to-title info))))
-    (if orgmdb-type-prop
-        (org-set-property orgmdb-type-prop (orgmdb-type info))
-      (org-toggle-tag (orgmdb-type info) 'on)))
+    (let ((user-type (orgmdb--map-omdb-type-to-user-tag (orgmdb-type info))))
+      (if orgmdb-type-prop
+          (org-set-property
+           orgmdb-type-prop
+           user-type)
+        (org-toggle-tag user-type 'on))))
   (message "Done."))
 
 ;;;###autoload
@@ -579,24 +609,22 @@ SHOULD-SET-TITLE does."
 It'll display several actions (like filling proprties etc.)
 related to the current object."
   (interactive)
-  (let ((tags (if orgmdb-type-prop
-                  (list (org-entry-get nil orgmdb-type-prop))
-                (org-get-tags))))
+  (let ((type (orgmdb--detect-type-from-header)))
     (cond
-     ((or (-contains? tags orgmdb-episode-tag)
+     ((or (equal type orgmdb-episode-tag)
           (orgmdb--extract-episode (thing-at-point 'symbol)))
       (orgmdb-act-on-episode))
-     ((-contains? tags orgmdb-movie-tag)
+     ((equal type orgmdb-movie-tag)
       (orgmdb-act-on-movie))
-     ((-contains? tags orgmdb-show-tag)
+     ((equal type orgmdb-show-tag)
       (orgmdb-act-on-show))
      ((org-at-heading-p)
-      (setq tags (completing-read
+      (setq type (completing-read
                   "What is this? "
                   (list orgmdb-movie-tag orgmdb-show-tag orgmdb-episode-tag)))
       (if orgmdb-type-prop
-          (org-set-property orgmdb-type-prop tags)
-        (org-set-tags tags))
+          (org-set-property orgmdb-type-prop type)
+        (org-toggle-tag type 'on))
       (orgmdb-act))
      (t
       (user-error "Not on an org header or an episode object")))))
