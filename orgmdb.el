@@ -4,7 +4,7 @@
 
 ;; Author: Isa Mert Gurbuz <isamert@protonmail.com>
 ;; Version: 0.5
-;; URL: https://github.com/isamert/orgmdb
+;; URL: https://github.com/isamert/orgmdb.el
 ;; Package-Requires: ((emacs "27.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
