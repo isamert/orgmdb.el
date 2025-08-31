@@ -1,5 +1,6 @@
 #+TITLE: orgmdb.el
 
+[[https://stable.melpa.org/#/orgmdb][file:https://stable.melpa.org/packages/orgmdb-badge.svg]]
 [[https://melpa.org/#/orgmdb][file:https://melpa.org/packages/orgmdb-badge.svg]]
 
 Tools for managing your watchlist in org-mode and some functions for interacting with [[http://www.omdbapi.com/][OMDb API]].

@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Isa Mert Gurbuz
 
 ;; Author: Isa Mert Gurbuz <isamert@protonmail.com>
-;; Version: 0.5
+;; Version: 1.0.0
 ;; URL: https://github.com/isamert/orgmdb.el
 ;; Package-Requires: ((emacs "27.1") (dash "2.11.0") (s "1.12.0") (org "8.0.0"))
 
