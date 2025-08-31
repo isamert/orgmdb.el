@@ -4,6 +4,22 @@
 
 Tools for managing your watchlist in org-mode and some functions for interacting with [[http://www.omdbapi.com/][OMDb API]].
 
+* Contents :noexport:
+:PROPERTIES:
+:TOC:      :include siblings :depth 3 :ignore this
+:END:
+:CONTENTS:
+- [[#installation][Installation]]
+- [[#demo][Demo]]
+  - [[#displaying-detailed-movie-information][Displaying detailed movie information]]
+  - [[#filling-movie-metadata][Filling movie metadata]]
+  - [[#opening-a-local-video][Opening a local video]]
+- [[#configuration][Configuration]]
+- [[#interactive-usage][Interactive usage]]
+  - [[#defining-new-actions][Defining new actions]]
+- [[#library-usage][Library usage]]
+:END:
+
 * Installation
 orgmdb is available through [[https://melpa.org/#/orgmdb][MELPA]]. If you have it set up already, just do ~M-x package-install orgmdb~ and you are good to go. Otherwise please see [[https://melpa.org/#/getting-started][MELPA getting started]] page to learn how you can install packages through MELPA or see the following installation options.
 
@@ -41,6 +57,8 @@ You need get yourself an API key to be able to use this package, see [[https://o
 #+begin_src elisp
   (setq orgmdb-omdb-apikey "YOUR-API-KEY")
 #+end_src
+
+Do ~M-x customize-group orgmdb RET~ to see all customization options.
 
 * Interactive usage
 ~orgmdb.el~ offers several actions that you can call upon a movie/show/episode objects. These actions can be accessed by calling ~orgmdb-act~ function. A movie/show object is simply an org header with a tag, like the following:
@@ -118,3 +136,7 @@ You can define new actions for movie/show/episode objects using ~orgmdb-defactio
    (Language . "English, Spanish")
    (Country . "USA") ...)
 #+end_src
+
+# Local Variables:
+# before-save-hook: org-make-toc
+# End:
