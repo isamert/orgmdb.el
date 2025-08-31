@@ -106,7 +106,7 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 - writer
 - year
 
-If you add `image' to this list, orgmdb will download and save
+If you add `poster' to this list, orgmdb will download and save
 the movie poster into `orgmdb-poster-folder' and embed it right
 under the header."
   :type 'list
@@ -416,7 +416,9 @@ If not on a org header, simpy ask from user."
 
 (defun orgmdb--download-image-for (info)
   (let ((path (format "%s/orgmdb_poster_%s_%s.jpg"
-                      orgmdb-poster-folder
+                      (prog1 orgmdb-poster-folder
+                        (unless (file-exists-p orgmdb-poster-folder)
+                          (make-directory orgmdb-poster-folder t)))
                       (s-snake-case (orgmdb-title info))
                       (orgmdb-year info))))
     (unless (file-exists-p path)
