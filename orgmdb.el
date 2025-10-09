@@ -649,7 +649,7 @@ related to the current object."
 (defun orgmdb--act-on (type &rest args)
   (apply
    (cdr (orgmdb--completing-read-object
-         (format "Act on %s: " 'movie)
+         (format "Act on %s: " type)
          (map-values (symbol-value (intern (concat "orgmdb--" (symbol-name type) "-actions"))))
          :formatter #'car
          :sort? nil))
