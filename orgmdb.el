@@ -160,9 +160,11 @@ under the header."
 (defconst orgmdb--episode-matcher "[sS][0-9]\\{2\\}[eE][0-9]\\{2\\}")
 
 (defun orgmdb--url-retrieve-sync (url)
-  "Retrieve URL synchronously as string."
+  "GET URL body synchronously as string."
   (with-current-buffer (url-retrieve-synchronously url)
-    (let ((result (decode-coding-string (buffer-string) 'utf-8)))
+    (goto-char (point-min))
+    (re-search-forward "\r?\n\r?\n")
+    (let ((result (decode-coding-string (buffer-substring-no-properties (point) (point-max)) 'utf-8)))
       (kill-buffer)
       result)))
 
@@ -170,12 +172,10 @@ under the header."
   "Send a GET request to given URL and return the response body.
 PARAMS should be an alist.  Pairs with nil values are skipped."
   (->> params
-       (--filter (cadr it))
-       (url-build-query-string)
-       (format "%s/?%s" url)
-       (orgmdb--url-retrieve-sync)
-       (s-split "\n\n")
-       (cadr)))
+     (--filter (cadr it))
+     (url-build-query-string)
+     (format "%s/?%s" url)
+     (orgmdb--url-retrieve-sync)))
 
 (cl-defun orgmdb--completing-read-object
     (prompt objects &key (formatter #'identity) category (sort? t) def multiple?)
