@@ -1,0 +1,4 @@
+* 1.0.1
+
+- Fix ~orgmdb-movie-properties~ not working outside org buffers
+- (internal) Fix wrong url-retrieve-synchronously result parsing
