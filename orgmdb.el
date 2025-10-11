@@ -384,10 +384,11 @@ ASK? is non-nil."
 (defun orgmdb--detect-params-from-header ()
   "Get parameters for `orgmdb' function from current org header.
 If not on a org header, simpy ask from user."
-  (-let* ((header (or (org-entry-get nil "ITEM") ""))
-          (imdb-id (or (orgmdb--extract-imdb-id header)
-                       (orgmdb--extract-imdb-id (org-entry-get nil "IMDB-ID"))))
-          (type (when (not imdb-id)
+  (-let* ((org? (derived-mode-p 'org-mode))
+          (header (when org? (or (org-entry-get nil "ITEM") "")))
+          (imdb-id (when org? (or (orgmdb--extract-imdb-id header)
+                                  (orgmdb--extract-imdb-id (org-entry-get nil "IMDB-ID")))))
+          (type (when (and org? (not imdb-id))
                   (orgmdb--detect-type-from-header t)))
           ((title year) (when (not imdb-id)
                           (if (s-blank? header)
