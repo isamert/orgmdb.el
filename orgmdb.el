@@ -73,7 +73,8 @@ Used while searching for video files for given title."
   '(genre runtime director imdb-id)
   "List of properties for `orgmdb-fill-movie-properties'.
 When `orgmdb-fill-movie-properties' is called, these properties will be
-  fetched and set to the headers property drawer.  Possible properties are:
+fetched and set to the headers property drawer.  Possible properties
+are:
 
 - actors
 - awards
@@ -109,7 +110,37 @@ When `orgmdb-fill-movie-properties' is called, these properties will be
 If you add `poster' to this list, orgmdb will download and save
 the movie poster into `orgmdb-poster-folder' and embed it right
 under the header."
-  :type 'list
+  :type '(repeat (choice
+                  (const :tag "Actors" actors)
+                  (const :tag "Awards" awards)
+                  (const :tag "Box Office" box-office)
+                  (const :tag "Country" country)
+                  (const :tag "Director" director)
+                  (const :tag "DVD" dvd)
+                  (const :tag "Episode" episode)
+                  (const :tag "Genre" genre)
+                  (const :tag "IMDB" imdb)
+                  (const :tag "IMDB ID" imdb-id)
+                  (const :tag "IMDB Link" imdb-link)
+                  (const :tag "IMDB Rating" imdb-rating)
+                  (const :tag "IMDB Votes" imdb-votes)
+                  (const :tag "Language" language)
+                  (const :tag "Metacritic" metacritic)
+                  (const :tag "Metascore" metascore)
+                  (const :tag "Play" play)
+                  (const :tag "Plot" plot)
+                  (const :tag "Poster" poster)
+                  (const :tag "Production" production)
+                  (const :tag "Rated" rated)
+                  (const :tag "Released" released)
+                  (const :tag "Runtime" runtime)
+                  (const :tag "Season" season)
+                  (const :tag "Title" title)
+                  (const :tag "Tomatometer" tomatometer)
+                  (const :tag "Type" type)
+                  (const :tag "Website" website)
+                  (const :tag "Writer" writer)
+                  (const :tag "Year" year)))
   :group 'orgmdb)
 
 (defcustom orgmdb-poster-folder
