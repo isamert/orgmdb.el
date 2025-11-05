@@ -638,6 +638,7 @@ SHOULD-SET-TITLE does."
                              (outline-up-heading 1 t))))
                 (throw 'break nil))))))))
 
+;;;###autoload
 (defun orgmdb-act ()
   "Act on the current movie/series/episode object.
 It'll display several actions (like filling proprties etc.)
@@ -663,16 +664,19 @@ related to the current object."
      (t
       (user-error "Not on an org header or an episode object")))))
 
+;;;###autoload
 (defun orgmdb-act-on-movie ()
   "List possible actions on the movie at point."
   (interactive)
   (orgmdb--act-on 'movie))
 
+;;;###autoload
 (defun orgmdb-act-on-show ()
   "List possible actions on the show at point."
   (interactive)
   (orgmdb--act-on 'show))
 
+;;;###autoload
 (defun orgmdb-act-on-episode (&optional episode)
   "List possible actions on the EPISODE at point."
   (interactive)

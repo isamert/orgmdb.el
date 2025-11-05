@@ -1,3 +1,7 @@
+* Unreleased
+
+- Add autoload directive to act-* functions, fixes #16
+
 * 1.0.1
 
 - Fix ~orgmdb-movie-properties~ not working outside org buffers
