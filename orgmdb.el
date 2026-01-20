@@ -179,6 +179,16 @@ under the header."
   :type 'string
   :group 'orgmdb)
 
+(defcustom orgmdb-not-available-property-value "N/A"
+  "String used as a placeholder when a property value is unavailable.
+
+When non-nil, OrgMDB inserts this string for any property whose value
+cannot be determined while filling properties (i.e. not returned from
+OMDB).  When nil, OrgMDB skips creating such properties entirely instead
+of inserting a placeholder."
+  :type 'string
+  :group 'orgmdb)
+
 ;;;###autoload
 (defvar orgmdb-omdb-url
   "https://www.omdbapi.com"
@@ -519,15 +529,18 @@ for check how parameter detection works."
   (orgmdb--ensure-response-is-successful info)
   (--each
       (remq 'poster orgmdb-fill-property-list)
-    (-as->
-     (format "orgmdb-%s" it) fn
-     (intern fn)
-     (apply fn `(,info "N/A"))
-     (org-entry-put nil
-                    (if orgmdb-upcase-properties
-                        (upcase (format "%s" it))
-                      (format "%s" it))
-                    fn)))
+    (let* ((key (if orgmdb-upcase-properties
+                    (upcase (format "%s" it))
+                  (format "%s" it)))
+           (val (-as->
+                 (format "orgmdb-%s" it) fn
+                 (intern fn)
+                 (apply fn `(,info ,orgmdb-not-available-property-value))))
+           (unavailable? (equal val orgmdb-not-available-property-value)))
+      (when (or (not unavailable?)
+                (and orgmdb-not-available-property-value
+                     (not (org-entry-get nil key nil))))
+        (org-entry-put nil key val))))
   (when (memq 'poster orgmdb-fill-property-list)
     (let ((path (orgmdb--download-image-for info)))
       (save-excursion
