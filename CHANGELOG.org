@@ -1,3 +1,8 @@
+* 1.1.0
+
+- Prevent overriding existing properties when the incoming value is nil or "N/A" while filling.
+- Introduce ~orgmdb-not-available-property-value~ to control how unavailable values are stored. When set to nil, properties with unavailable values are not created or modified.
+
 * 1.0.2
 
 - Add autoload directive to act-* functions, fixes #16
